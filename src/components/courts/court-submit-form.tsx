@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createCourtAction } from "@/lib/actions/courts";
@@ -32,7 +32,7 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createCourtSchema),
+    resolver: zodResolver(createCourtSchema) as Resolver<FormValues>,
     defaultValues: {
       name: "",
       address: "",
