@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { createReviewAction } from "@/lib/actions/courts";
@@ -29,7 +29,7 @@ export function ReviewForm({ courtId, className }: ReviewFormProps) {
   const [pending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(createReviewSchema),
+    resolver: zodResolver(createReviewSchema) as Resolver<FormValues>,
     defaultValues: {
       courtId,
       rating: 5,
