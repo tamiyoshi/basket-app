@@ -1,103 +1,206 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Compass, Filter, MapPinned } from "lucide-react";
 
-export default function Home() {
+import { CourtCard } from "@/components/courts/court-card";
+import { Button } from "@/components/ui/button";
+import { getCourts } from "@/lib/courts";
+import { cn } from "@/lib/utils";
+
+const distanceFilters = [
+  { label: "1km", value: 1 },
+  { label: "3km", value: 3 },
+  { label: "10km", value: 10 },
+];
+
+const priceFilters = [
+  { label: "すべて", value: undefined },
+  { label: "無料", value: true },
+  { label: "有料", value: false },
+] as const;
+
+type HomePageProps = {
+  searchParams?: Record<string, string | string[] | undefined>;
+};
+
+function buildHref(
+  current: Record<string, string | string[] | undefined> | undefined,
+  overrides: Record<string, string | undefined>,
+) {
+  const params = new URLSearchParams();
+
+  if (current) {
+    for (const [key, value] of Object.entries(current)) {
+      if (value === undefined || key in overrides) {
+        continue;
+      }
+
+      const resolved = Array.isArray(value) ? value[0] : value;
+
+      if (resolved !== undefined) {
+        params.set(key, resolved);
+      }
+    }
+  }
+
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+  }
+
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+function parseBooleanParam(value?: string | string[]) {
+  if (Array.isArray(value)) {
+    value = value[0];
+  }
+
+  if (value === "true" || value === "1") {
+    return true;
+  }
+
+  if (value === "false" || value === "0") {
+    return false;
+  }
+
+  return undefined;
+}
+
+export default async function Home({ searchParams }: HomePageProps) {
+  const isFree = parseBooleanParam(searchParams?.isFree ?? searchParams?.free);
+
+  const courts = await getCourts({
+    isFree,
+    limit: 12,
+  });
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div className="space-y-12">
+      <section className="space-y-6">
+        <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+          <Compass className="h-3.5 w-3.5" />
+          全国の屋外バスケットコート検索MVP
+        </span>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              近くのバスケットコートをもっと気軽に。
+            </h1>
+            <p className="text-base text-muted-foreground">
+              HoopSpotterは、屋外バスケットコートを地図から探してレビューや情報を共有できるコミュニティアプリです。SSRで地図＋リスト表示を行い、ユーザー投稿によって最新情報を保ちます。
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button asChild size="lg">
+                <Link href="/submit">新しいコートを投稿</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link href="/login">Googleでログイン</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="rounded-xl border bg-card p-6 shadow-sm">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <MapPinned className="h-4 w-4" />
+              地図プレビュー（開発予定）
+            </h2>
+            <div className="mt-4 flex h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
+              Google Maps API でコートを描画します
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Supabaseの近傍検索（PostGIS + GIST）を利用して、現在地中心のピンを表示予定です。
+            </p>
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </section>
+
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <header className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">コート一覧</h2>
+              <p className="text-sm text-muted-foreground">
+                SupabaseからSSRで取得した最新のコート情報を表示します。
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/submit">コートを追加</Link>
+            </Button>
+          </header>
+          {courts.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
+              条件に合うコートがまだ登録されていません。最初の投稿者としてコート情報を追加しましょう！
+            </div>
+          ) : (
+            <ul className="grid gap-4">
+              {courts.map((court) => (
+                <CourtCard key={court.id} court={court} />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <aside className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <Filter className="h-4 w-4" />
+            条件で絞り込む
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              距離（開発予定）
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {distanceFilters.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  className="rounded-full border border-input px-4 py-1 text-sm text-muted-foreground"
+                  disabled
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              料金
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {priceFilters.map((filter) => {
+                const isActive = isFree === filter.value;
+                const href =
+                  filter.value === undefined
+                    ? buildHref(searchParams, { isFree: undefined })
+                    : buildHref(searchParams, {
+                        isFree: filter.value ? "true" : "false",
+                      });
+
+                return (
+                  <Link
+                    key={filter.label}
+                    href={href}
+                    className={cn(
+                      "rounded-full border px-4 py-1 text-sm transition",
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-input hover:border-primary hover:text-primary",
+                    )}
+                  >
+                    {filter.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            投稿・レビューにはGoogleログインが必要です。Supabase Authと連携し、即時公開運用を想定しています。
+          </div>
+        </aside>
+      </section>
     </div>
   );
 }

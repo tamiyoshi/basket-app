@@ -32,7 +32,7 @@
 ## 主要機能（MVP段階）
 - `/` : Supabaseの`courts`テーブルからSSRで一覧を取得（無料/有料フィルタ、地図プレースホルダー付き）
 - `/courts/[id]` : コートの基本情報・写真・レビューをSSRで取得し、レビューリストを表示
-- `/submit` : ログイン済みユーザーのみ投稿フォーム枠を表示（未ログイン時はログイン誘導）
+- `/submit` : ログイン済みユーザーのみ投稿フォームを表示。画像（JPEG/PNG/WebP, 5MB以下）付きでコート情報を投稿
 - `/login` : Google OAuthによるログイン/ログアウト導線（`/auth/callback`でセッション交換）
 - `/auth/callback` : Supabaseから返却されたAuthorization CodeをCookieセッションに変換
   - 投稿フォームはServer Action経由で`courts`テーブルに書き込み、レビューは`reviews`テーブルへ即時保存
@@ -63,12 +63,13 @@
 - Postgres: `profiles`, `courts`, `court_photos`, `reviews` を作成し、PostGIS拡張とGISTインデックスで近傍検索を最適化
 - RLS: 投稿・レビューそれぞれ `auth.uid()` と `created_by / author_id` を紐付け、閲覧はPublicに開放
 - Storage: `court-photos` バケットをPublic扱いで作成し、アップロード権限は認証ユーザーに限定
+- StorageのCORS/Content-Typeを調整し、JPEG/PNG/WebPのアップロードを許可
 - 型同期: `supabase gen types typescript --project-id <project>` を実行し、`src/types/database.ts` を最新化
 
 ## 今後の実装ガイド
 - `getCourts` をPostGISベースのRPC（例: `courts_nearby`）に切り替え、距離フィルタを有効化
 - 投稿フォームにServer Actionを実装し、Storageアップロードと近傍検索用ジオメトリ登録を行う
-- 写真アップロードは未実装のため、Supabase Storageへの書き込みロジックを追加
+- 写真アップロード時のサムネイル生成や画像最適化ワークフローを追加
 - レビュー投稿フォームを追加し、平均評価/件数をSupabase側で集計するビューを作成
 - Google Maps APIを用いたClient Componentで地図ピン表示と現在地検索を実装
 - shadcn/uiコンポーネントをインポートしてフォーム/ダイアログ/モーダルを整備
