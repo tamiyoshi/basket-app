@@ -8,6 +8,7 @@ export type CourtPhotoRow = Database["public"]["Tables"]["court_photos"]["Row"];
 export type CourtSummary = CourtRow & {
   reviewCount: number;
   averageRating: number | null;
+  distanceMeters?: number | null;
 };
 
 export type CourtDetail = CourtRow & {
@@ -27,6 +28,11 @@ export type ReviewWithAuthor = ReviewRow & {
 export type CourtSearchFilters = {
   isFree?: boolean | null;
   limit?: number;
+  useLocation?: {
+    lat: number;
+    lng: number;
+    radiusMeters?: number;
+  } | null;
 };
 
 function calculateRatingSummary(reviews: Pick<ReviewRow, "rating">[]) {
@@ -43,6 +49,47 @@ function calculateRatingSummary(reviews: Pick<ReviewRow, "rating">[]) {
 
 export async function getCourts(filters: CourtSearchFilters = {}): Promise<CourtSummary[]> {
   const supabase = createSupabaseServerClient();
+
+  if (filters.useLocation) {
+    const radius = filters.useLocation.radiusMeters ?? 5000;
+    const limit = filters.limit ?? 50;
+    const { data, error } = await supabase
+      .rpc("courts_nearby", {
+        lat: filters.useLocation.lat,
+        lng: filters.useLocation.lng,
+        radius_m: radius,
+        limit_count: limit,
+      })
+      .returns<
+        Array<
+          CourtRow & {
+            distance_m: number;
+            average_rating: number | null;
+            review_count: number;
+          }
+        >
+      >();
+
+    if (error) {
+      console.error("Failed to fetch nearby courts", error);
+      return [];
+    }
+
+    const nearby = data ?? [];
+    return nearby
+      .filter((court) => {
+        if (filters.isFree === undefined || filters.isFree === null) {
+          return true;
+        }
+        return court.is_free === filters.isFree;
+      })
+      .map((court) => ({
+        ...court,
+        averageRating: court.average_rating ?? null,
+        reviewCount: court.review_count ?? 0,
+        distanceMeters: court.distance_m ?? null,
+      }));
+  }
 
   let query = supabase
     .from("courts")
@@ -91,6 +138,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
       ...rest,
       reviewCount,
       averageRating,
+      distanceMeters: undefined,
     } as CourtSummary;
   });
 }

@@ -48,6 +48,9 @@ export function CourtCard({ court, className }: CourtCardProps) {
             {court.averageRating !== null ? court.averageRating.toFixed(1) : "-"}
           </div>
           <p>レビュー {court.reviewCount} 件</p>
+          {typeof court.distanceMeters === "number" ? (
+            <p>{(court.distanceMeters / 1000).toFixed(1)} km</p>
+          ) : null}
         </div>
       </div>
     </li>

@@ -36,6 +36,7 @@
 - `/login` : Google OAuthによるログイン/ログアウト導線（`/auth/callback`でセッション交換）
 - `/auth/callback` : Supabaseから返却されたAuthorization CodeをCookieセッションに変換
   - 投稿フォームはServer Action経由で`courts`テーブルに書き込み、レビューは`reviews`テーブルへ即時保存
+  - 位置情報利用時はSupabase RPC `courts_nearby` を利用し、PostGIS距離検索で近隣コートを表示
 
 ## ディレクトリ構成ハイライト
 - `src/app/page.tsx` … SSRコート一覧とフィルタUI
@@ -65,6 +66,26 @@
 - Storage: `court-photos` バケットをPublic扱いで作成し、アップロード権限は認証ユーザーに限定
 - StorageのCORS/Content-Typeを調整し、JPEG/PNG/WebPのアップロードを許可
 - 型同期: `supabase gen types typescript --project-id <project>` を実行し、`src/types/database.ts` を最新化
+
+## Supabase スキーマ適用手順
+1. Supabase CLI をインストールし、プロジェクトとリンク
+   ```bash
+   npm install -g supabase
+   supabase login
+   supabase link --project-ref <your-project-ref>
+   ```
+2. 付属の SQL を適用
+   ```bash
+   supabase db push supabase/schema.sql
+   supabase db push supabase/policies.sql
+   ```
+   もしくは Supabase ダッシュボードの SQL Editor で `supabase/` 以下のファイルを貼り付けて実行。
+   ※ `schema.sql` には PostGIS 拡張と RPC `courts_nearby` の定義を含みます。
+3. 型定義を最新化
+   ```bash
+   supabase gen types typescript --project-id <your-project-ref> > src/types/database.ts
+   ```
+4. Storage バケット `court-photos` を作成し、RLS / ポリシーの適用を確認。
 
 ## 今後の実装ガイド
 - `getCourts` をPostGISベースのRPC（例: `courts_nearby`）に切り替え、距離フィルタを有効化

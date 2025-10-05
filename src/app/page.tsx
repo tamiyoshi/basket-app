@@ -5,6 +5,7 @@ import { CourtCard } from "@/components/courts/court-card";
 import { Button } from "@/components/ui/button";
 import { getCourts } from "@/lib/courts";
 import { cn } from "@/lib/utils";
+import { LocationFilter } from "@/components/courts/location-filter";
 
 const distanceFilters = [
   { label: "1km", value: 1 },
@@ -19,7 +20,7 @@ const priceFilters = [
 ] as const;
 
 type HomePageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 function buildHref(
@@ -70,12 +71,39 @@ function parseBooleanParam(value?: string | string[]) {
   return undefined;
 }
 
+function parseNumberParam(value?: string | string[]) {
+  if (Array.isArray(value)) {
+    value = value[0];
+  }
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 export default async function Home({ searchParams }: HomePageProps) {
-  const isFree = parseBooleanParam(searchParams?.isFree ?? searchParams?.free);
+  const params = await searchParams;
+  const isFree = parseBooleanParam(params?.isFree ?? params?.free);
+  const lat = parseNumberParam(params?.lat);
+  const lng = parseNumberParam(params?.lng);
+  const radius = parseNumberParam(params?.radius);
+
+  const useLocation =
+    typeof lat === "number" && typeof lng === "number"
+      ? {
+          lat,
+          lng,
+          radiusMeters: typeof radius === "number" ? radius : undefined,
+        }
+      : null;
 
   const courts = await getCourts({
     isFree,
     limit: 12,
+    useLocation,
   });
 
   return (
@@ -113,6 +141,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <p className="mt-3 text-xs text-muted-foreground">
               Supabaseの近傍検索（PostGIS + GIST）を利用して、現在地中心のピンを表示予定です。
             </p>
+            <LocationFilter />
           </div>
         </div>
       </section>
@@ -172,10 +201,10 @@ export default async function Home({ searchParams }: HomePageProps) {
             <div className="flex flex-wrap gap-2">
               {priceFilters.map((filter) => {
                 const isActive = isFree === filter.value;
-                const href =
-                  filter.value === undefined
-                    ? buildHref(searchParams, { isFree: undefined })
-                    : buildHref(searchParams, {
+    const href =
+      filter.value === undefined
+                    ? buildHref(params, { isFree: undefined })
+                    : buildHref(params, {
                         isFree: filter.value ? "true" : "false",
                       });
 

@@ -35,15 +35,16 @@ function getPhotoUrl(storagePath: string) {
 }
 
 type CourtDetailPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function generateMetadata({
   params,
 }: CourtDetailPageProps): Promise<Metadata> {
-  const court = await getCourtById(params.id);
+  const { id } = await params;
+  const court = await getCourtById(id);
 
   if (!court) {
     return {
@@ -58,13 +59,14 @@ export async function generateMetadata({
 }
 
 export default async function CourtDetailPage({ params }: CourtDetailPageProps) {
-  const court = await getCourtById(params.id);
+  const { id } = await params;
+  const court = await getCourtById(id);
 
   if (!court) {
     notFound();
   }
 
-  const reviews = await getCourtReviews(params.id);
+  const reviews = await getCourtReviews(id);
   const { session } = await getSessionWithProfile();
 
   return (
