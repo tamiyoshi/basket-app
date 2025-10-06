@@ -17,24 +17,23 @@ function assertSupabaseEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPAB
 }
 
 export function createSupabaseServerClient() {
-  const cookieStore = cookies();
+  const cookieStorePromise = cookies();
   const supabaseUrl = assertSupabaseEnv("NEXT_PUBLIC_SUPABASE_URL");
   const supabaseKey = assertSupabaseEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
   return createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
-      get(name: string) {
+      async get(name: string) {
+        const cookieStore = await cookieStorePromise;
         return cookieStore.get(name)?.value;
       },
-      set(name: string, value: string, options: CookieOptions) {
-        if (typeof cookieStore.set === "function") {
-          cookieStore.set({ name, value, ...options });
-        }
+      async set(name: string, value: string, options: CookieOptions) {
+        const cookieStore = await cookieStorePromise;
+        cookieStore.set({ name, value, ...options });
       },
-      remove(name: string, options: CookieOptions) {
-        if (typeof cookieStore.set === "function") {
-          cookieStore.set({ name, value: "", ...options, maxAge: 0 });
-        }
+      async remove(name: string, options: CookieOptions) {
+        const cookieStore = await cookieStorePromise;
+        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
       },
     },
   });
