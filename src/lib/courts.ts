@@ -123,7 +123,9 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
   const { data, error } = await query.returns<CourtWithStatsRow[]>();
 
   if (error) {
-    if (error.message?.includes("court_with_stats")) {
+    const message = error?.message ?? String(error);
+
+    if (message.includes("court_with_stats")) {
       return fetchCourtsFromBaseTable({
         supabase,
         limit,
@@ -132,8 +134,13 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
       });
     }
 
-    console.error("Failed to fetch courts", error?.message ?? error);
-    throw new Error(error?.message ?? "コート情報の取得に失敗しました");
+    if (message.includes("Invalid API key")) {
+      console.error("Failed to fetch courts", message);
+      throw new Error("Supabase API キーが無効です。環境変数 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY を確認してください。");
+    }
+
+    console.error("Failed to fetch courts", message);
+    throw new Error(message ?? "コート情報の取得に失敗しました");
   }
 
   return (data ?? []).map(({ average_rating, review_count, ...rest }) => ({
@@ -188,6 +195,11 @@ async function fetchCourtsFromBaseTable(params: {
         "Supabase schema 未適用のため courts テーブルにアクセスできません。supabase/schema.sql を適用してください。",
       );
       return [];
+    }
+
+    if (message.includes("Invalid API key")) {
+      console.error("Failed to fetch courts (fallback)", message);
+      throw new Error("Supabase API キーが無効です。環境変数 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY を確認してください。");
     }
 
     console.error("Failed to fetch courts (fallback)", message);
