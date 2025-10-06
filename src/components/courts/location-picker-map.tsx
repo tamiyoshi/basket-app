@@ -45,7 +45,7 @@ export function LocationPickerMap({ value, onChange, className }: LocationPicker
 
     let isMounted = true;
 
-    setOptions({ apiKey });
+    setOptions({ key: apiKey, v: "weekly" });
 
     importLibrary("maps")
       .then((maps) => {

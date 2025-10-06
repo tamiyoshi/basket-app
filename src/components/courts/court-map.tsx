@@ -57,7 +57,7 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
 
     let isMounted = true;
 
-    setOptions({ apiKey });
+    setOptions({ key: apiKey, v: "weekly" });
 
     importLibrary("maps")
       .then((maps) => {
