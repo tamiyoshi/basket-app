@@ -46,7 +46,7 @@ export async function createCourtAction(formData: FormData): Promise<CreateCourt
   });
 
   if (!parsed.success) {
-    return toActionError(parsed.error.errors[0]?.message ?? "入力内容を確認してください");
+    return toActionError(parsed.error.issues[0]?.message ?? "入力内容を確認してください");
   }
 
   const input = parsed.data;
@@ -135,7 +135,7 @@ export async function createReviewAction(formData: FormData): Promise<CreateRevi
   });
 
   if (!parsed.success) {
-    return toActionError(parsed.error.errors[0]?.message ?? "入力内容を確認してください");
+    return toActionError(parsed.error.issues[0]?.message ?? "入力内容を確認してください");
   }
 
   const input = parsed.data;
