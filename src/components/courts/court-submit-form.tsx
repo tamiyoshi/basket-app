@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
+import { LocationPickerMap } from "@/components/courts/location-picker-map";
 
 type CourtSubmitFormProps = {
   className?: string;
@@ -29,6 +30,7 @@ type FormState = {
 export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
   const [formState, setFormState] = useState<FormState>({ status: "idle" });
   const [pending, startTransition] = useTransition();
+  const [isGeolocating, setIsGeolocating] = useState(false);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<FormValues>({
@@ -46,6 +48,14 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
       photo: null,
     },
   });
+
+  const latitudeValue = form.watch("latitude");
+  const longitudeValue = form.watch("longitude");
+
+  const selectedLocation =
+    typeof latitudeValue === "number" && typeof longitudeValue === "number"
+      ? { lat: latitudeValue, lng: longitudeValue }
+      : null;
 
   const photoField = form.register("photo", {
     setValueAs: (value: FileList | null) => {
@@ -112,6 +122,41 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
         courtId: result.courtId,
       });
     });
+  };
+
+  const handleMapSelection = (value: { lat: number; lng: number } | null) => {
+    if (!value) {
+      return;
+    }
+    form.setValue("latitude", Number(value.lat.toFixed(6)), { shouldDirty: true });
+    form.setValue("longitude", Number(value.lng.toFixed(6)), { shouldDirty: true });
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("このブラウザでは位置情報を取得できません");
+      return;
+    }
+
+    setIsGeolocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setIsGeolocating(false);
+        const lat = Number(position.coords.latitude.toFixed(6));
+        const lng = Number(position.coords.longitude.toFixed(6));
+        form.setValue("latitude", lat, { shouldDirty: true });
+        form.setValue("longitude", lng, { shouldDirty: true });
+      },
+      () => {
+        setIsGeolocating(false);
+        alert("位置情報を取得できませんでした");
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 60_000,
+        timeout: 15_000,
+      },
+    );
   };
 
   return (
@@ -195,6 +240,25 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
           </select>
           <FieldError message={form.formState.errors.isFree?.message} />
         </Field>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium">地図で位置を指定</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleUseCurrentLocation}
+            disabled={isGeolocating}
+          >
+            {isGeolocating ? "取得中..." : "現在地を設定"}
+          </Button>
+        </div>
+        <LocationPickerMap value={selectedLocation} onChange={handleMapSelection} />
+        <p className="text-xs text-muted-foreground">
+          ピンをクリックすると緯度・経度が自動で入力されます。位置情報がうまく取得できない場合は、地図をドラッグして目的地を指定してください。
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

@@ -4,6 +4,7 @@ import type { Database } from "@/types/database";
 export type CourtRow = Database["public"]["Tables"]["courts"]["Row"];
 export type ReviewRow = Database["public"]["Tables"]["reviews"]["Row"];
 export type CourtPhotoRow = Database["public"]["Tables"]["court_photos"]["Row"];
+export type CourtWithStatsRow = Database["public"]["Views"]["court_with_stats"]["Row"];
 
 type NearbyCourtRow = CourtRow & {
   distance_m: number;
@@ -34,6 +35,7 @@ export type ReviewWithAuthor = ReviewRow & {
 export type CourtSearchFilters = {
   isFree?: boolean | null;
   limit?: number;
+  offset?: number;
   useLocation?: {
     lat: number;
     lng: number;
@@ -55,10 +57,10 @@ function calculateRatingSummary(reviews: Pick<ReviewRow, "rating">[]) {
 
 export async function getCourts(filters: CourtSearchFilters = {}): Promise<CourtSummary[]> {
   const supabase = createSupabaseServerClient();
+  const limit = filters.limit ?? 12;
 
   if (filters.useLocation) {
     const radius = filters.useLocation.radiusMeters ?? 5000;
-    const limit = filters.limit ?? 50;
     const { data, error } = await supabase.rpc("courts_nearby", {
       lat: filters.useLocation.lat,
       lng: filters.useLocation.lng,
@@ -68,7 +70,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
 
     if (error) {
       console.error("Failed to fetch nearby courts", error);
-      return [];
+      throw new Error(error.message ?? "コート情報の取得に失敗しました");
     }
 
     const nearby = (data as NearbyCourtRow[] | null) ?? [];
@@ -86,6 +88,69 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
         distanceMeters: court.distance_m ?? null,
       }));
   }
+
+  const offset = filters.offset ?? 0;
+
+  let query = supabase
+    .from("court_with_stats")
+    .select(
+      `
+      id,
+      name,
+      address,
+      latitude,
+      longitude,
+      is_free,
+      hoop_count,
+      surface,
+      notes,
+      opening_hours,
+      created_by,
+      created_at,
+      updated_at,
+      average_rating,
+      review_count
+    `,
+    )
+    .order("created_at", { ascending: false });
+
+  if (filters.isFree !== undefined && filters.isFree !== null) {
+    query = query.eq("is_free", filters.isFree);
+  }
+
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error } = await query.returns<CourtWithStatsRow[]>();
+
+  if (error) {
+    if (error.message?.includes("court_with_stats")) {
+      return fetchCourtsFromBaseTable({
+        supabase,
+        limit,
+        offset,
+        isFree: filters.isFree,
+      });
+    }
+
+    console.error("Failed to fetch courts", error?.message ?? error);
+    throw new Error(error?.message ?? "コート情報の取得に失敗しました");
+  }
+
+  return (data ?? []).map(({ average_rating, review_count, ...rest }) => ({
+    ...rest,
+    reviewCount: Number(review_count ?? 0),
+    averageRating: average_rating ?? null,
+    distanceMeters: undefined,
+  }));
+}
+
+async function fetchCourtsFromBaseTable(params: {
+  supabase: ReturnType<typeof createSupabaseServerClient>;
+  limit: number;
+  offset: number;
+  isFree?: boolean | null;
+}) {
+  const { supabase, limit, offset, isFree } = params;
 
   let query = supabase
     .from("courts")
@@ -107,23 +172,26 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
       reviews:reviews(rating)
     `,
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
-  if (filters.isFree !== undefined && filters.isFree !== null) {
-    query = query.eq("is_free", filters.isFree);
+  if (isFree !== undefined && isFree !== null) {
+    query = query.eq("is_free", isFree);
   }
 
-  if (typeof filters.limit === "number") {
-    query = query.limit(filters.limit);
-  }
-
-  const { data, error } = await query.returns<
-    (CourtRow & { reviews: Pick<ReviewRow, "rating">[] })[]
-  >();
+  const { data, error } = await query;
 
   if (error) {
-    console.error("Failed to fetch courts", error);
-    return [];
+    const message = error.message ?? String(error);
+    if (message.includes("public.courts")) {
+      console.warn(
+        "Supabase schema 未適用のため courts テーブルにアクセスできません。supabase/schema.sql を適用してください。",
+      );
+      return [];
+    }
+
+    console.error("Failed to fetch courts (fallback)", message);
+    throw new Error(message ?? "コート情報の取得に失敗しました");
   }
 
   return (data ?? []).map((court) => {

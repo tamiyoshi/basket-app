@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Compass, Filter, MapPinned } from "lucide-react";
 
 import { CourtCard } from "@/components/courts/court-card";
+import { CourtMap } from "@/components/courts/court-map";
 import { Button } from "@/components/ui/button";
 import { getCourts } from "@/lib/courts";
 import { cn } from "@/lib/utils";
@@ -90,6 +91,10 @@ export default async function Home({ searchParams }: HomePageProps) {
   const lat = parseNumberParam(params?.lat);
   const lng = parseNumberParam(params?.lng);
   const radius = parseNumberParam(params?.radius);
+  const pageParam = parseNumberParam(params?.page);
+  const page = pageParam && pageParam > 0 ? Math.floor(pageParam) : 1;
+  const limit = 12;
+  const offset = (page - 1) * limit;
 
   const useLocation =
     typeof lat === "number" && typeof lng === "number"
@@ -100,10 +105,25 @@ export default async function Home({ searchParams }: HomePageProps) {
         }
       : null;
 
-  const courts = await getCourts({
-    isFree,
-    limit: 12,
-    useLocation,
+  let courts = [] as Awaited<ReturnType<typeof getCourts>>;
+  let fetchError: string | null = null;
+
+  try {
+    const filters = useLocation
+      ? { isFree, limit, useLocation }
+      : { isFree, limit, offset };
+    courts = await getCourts(filters);
+  } catch (error) {
+    fetchError = error instanceof Error ? error.message : "コート情報の取得に失敗しました";
+    courts = [];
+  }
+
+  const hasPrevPage = page > 1;
+  const hasNextPage = !fetchError && courts.length === limit;
+  const nextPageHref = buildHref(params, { page: String(page + 1) });
+  const previousPage = page - 1;
+  const prevPageHref = buildHref(params, {
+    page: hasPrevPage && previousPage > 1 ? String(previousPage) : undefined,
   });
 
   return (
@@ -135,11 +155,9 @@ export default async function Home({ searchParams }: HomePageProps) {
               <MapPinned className="h-4 w-4" />
               地図プレビュー（開発予定）
             </h2>
-            <div className="mt-4 flex h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
-              Google Maps API でコートを描画します
-            </div>
+            <CourtMap courts={courts} location={useLocation} className="mt-4" />
             <p className="mt-3 text-xs text-muted-foreground">
-              Supabaseの近傍検索（PostGIS + GIST）を利用して、現在地中心のピンを表示予定です。
+              Supabaseの近傍検索（PostGIS + GIST）とGoogle Mapsで現在地周辺のコートを可視化します。
             </p>
             <LocationFilter />
           </div>
@@ -147,21 +165,29 @@ export default async function Home({ searchParams }: HomePageProps) {
       </section>
 
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <header className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">コート一覧</h2>
-              <p className="text-sm text-muted-foreground">
-                SupabaseからSSRで取得した最新のコート情報を表示します。
+          <div className="space-y-4">
+            <header className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">コート一覧</h2>
+                <p className="text-sm text-muted-foreground">
+                  SupabaseからSSRで取得した最新のコート情報を表示します。
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
               <Link href="/submit">コートを追加</Link>
             </Button>
           </header>
-          {courts.length === 0 ? (
+          {fetchError ? (
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+              {fetchError}
+            </div>
+          ) : courts.length === 0 ? (
             <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
-              条件に合うコートがまだ登録されていません。最初の投稿者としてコート情報を追加しましょう！
+              条件に合うコートがまだ登録されていません。位置情報を許可するか、
+              <Link href="/submit" className="ml-1 text-primary underline">
+                新しいコートを投稿
+              </Link>
+              してコミュニティを盛り上げましょう。
             </div>
           ) : (
             <ul className="grid gap-4">
@@ -170,6 +196,31 @@ export default async function Home({ searchParams }: HomePageProps) {
               ))}
             </ul>
           )}
+          <div className="flex items-center justify-between border-t pt-4 text-sm">
+            <div>
+              現在ページ: {page}
+            </div>
+            <div className="flex items-center gap-2">
+              {hasPrevPage ? (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={prevPageHref}>前へ</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled>
+                  前へ
+                </Button>
+              )}
+              {hasNextPage ? (
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={nextPageHref}>次へ</Link>
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" disabled>
+                  次へ
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         <aside className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">

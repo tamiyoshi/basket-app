@@ -7,6 +7,7 @@
 - Tailwind CSS 3系 + shadcn/ui構成（`components.json` 設定済み）
 - Supabase (Auth / Postgres + PostGIS / Storage) クライアント初期化ユーティリティ
 - UIユーティリティ: class-variance-authority, tailwind-merge, lucide-react
+- 地図表示: Google Maps JavaScript API (`@googlemaps/js-api-loader`)
 - フォーム/バリデーション: react-hook-form, zod, @hookform/resolvers
 
 ## セットアップ手順
@@ -31,6 +32,7 @@
 
 ## 主要機能（MVP段階）
 - `/` : Supabaseの`courts`テーブルからSSRで一覧を取得（無料/有料フィルタ、地図プレースホルダー付き）
+- 地図コンポーネントがGoogle Maps APIでコート位置をプロットし、位置情報許可時は現在地を中心に表示
 - `/courts/[id]` : コートの基本情報・写真・レビューをSSRで取得し、レビューリストを表示
 - `/submit` : ログイン済みユーザーのみ投稿フォームを表示。画像（JPEG/PNG/WebP, 5MB以下）付きでコート情報を投稿
 - `/login` : Google OAuthによるログイン/ログアウト導線（`/auth/callback`でセッション交換）
@@ -41,7 +43,7 @@
 ## ディレクトリ構成ハイライト
 - `src/app/page.tsx` … SSRコート一覧とフィルタUI
 - `src/app/courts/[id]/page.tsx` … コート詳細ページ（写真・レビュー表示）
-- `src/app/submit/page.tsx` … 投稿フォーム枠（ログイン判定付き）
+- `src/app/submit/page.tsx` … 投稿フォーム枠（ログイン判定付き・地図ピッカーあり）
 - `src/app/login/page.tsx` … ログイン状態確認とGoogleサインイン
 - `src/app/auth/callback/route.ts` … Supabase OAuthコールバック処理
 - `src/components/courts/court-card.tsx` … コートカードUI
@@ -86,6 +88,12 @@
    supabase gen types typescript --project-id <your-project-ref> > src/types/database.ts
    ```
 4. Storage バケット `court-photos` を作成し、RLS / ポリシーの適用を確認。
+
+## Google Maps の設定メモ
+- `.env.local` と Vercel 環境変数に `NEXT_PUBLIC_GOOGLE_API_KEY`（必要なら `NEXT_PUBLIC_google_api_key`）を設定
+- API Console で Maps JavaScript API を有効化し、ドメイン制限を設定
+- 位置情報フィルタは HTTPS 環境でのみ動作。ブラウザに現在地利用を許可すると `/` ページの地図とリストが更新されます
+- 投稿フォームの地図ピッカーでピンを置くか「現在地を設定」を押すと緯度・経度が自動入力されます
 
 ## 今後の実装ガイド
 - `getCourts` をPostGISベースのRPC（例: `courts_nearby`）に切り替え、距離フィルタを有効化

@@ -172,7 +172,28 @@ export type Database = {
         ];
       };
     };
-    Views: Record<string, never>;
+    Views: {
+      court_with_stats: {
+        Row: {
+          id: string;
+          name: string;
+          address: string;
+          latitude: number;
+          longitude: number;
+          is_free: boolean;
+          hoop_count: number | null;
+          surface: string | null;
+          notes: string | null;
+          opening_hours: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+          average_rating: number | null;
+          review_count: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       courts_nearby: {
         Args: {
