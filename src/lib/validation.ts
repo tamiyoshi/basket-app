@@ -41,20 +41,20 @@ const imageFileSchema = z
 
 export const createCourtSchema = z.object({
   name: z
-    .string({ required_error: "コート名は必須です" })
+    .string({ message: "コート名は必須です" })
     .min(2, "コート名は2文字以上で入力してください"),
   address: z
-    .string({ required_error: "住所は必須です" })
+    .string({ message: "住所は必須です" })
     .min(5, "住所は5文字以上で入力してください"),
   latitude: z
-    .coerce.number({ invalid_type_error: "緯度は数値で入力してください" })
+    .coerce.number({ message: "緯度は数値で入力してください" })
     .gte(-90, "緯度が不正です")
     .lte(90, "緯度が不正です"),
   longitude: z
-    .coerce.number({ invalid_type_error: "経度は数値で入力してください" })
+    .coerce.number({ message: "経度は数値で入力してください" })
     .gte(-180, "経度が不正です")
     .lte(180, "経度が不正です"),
-  isFree: z.coerce.boolean({ required_error: "料金区分を選択してください" }),
+  isFree: z.coerce.boolean({ message: "料金区分を選択してください" }),
   hoopCount: z
     .coerce
     .number({ invalid_type_error: "リング数は数値で入力してください" })
