@@ -173,7 +173,34 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      courts_nearby: {
+        Args: {
+          lat: number;
+          lng: number;
+          radius_m?: number;
+          limit_count?: number;
+        };
+        Returns: Array<{
+          id: string;
+          name: string;
+          address: string;
+          latitude: number;
+          longitude: number;
+          is_free: boolean;
+          hoop_count: number | null;
+          surface: string | null;
+          notes: string | null;
+          opening_hours: string | null;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+          distance_m: number;
+          average_rating: number | null;
+          review_count: number;
+        }>;
+      };
+    };
     Enums: {
       user_role: "user" | "admin";
     };

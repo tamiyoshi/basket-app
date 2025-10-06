@@ -5,6 +5,12 @@ export type CourtRow = Database["public"]["Tables"]["courts"]["Row"];
 export type ReviewRow = Database["public"]["Tables"]["reviews"]["Row"];
 export type CourtPhotoRow = Database["public"]["Tables"]["court_photos"]["Row"];
 
+type NearbyCourtRow = CourtRow & {
+  distance_m: number;
+  average_rating: number | null;
+  review_count: number;
+};
+
 export type CourtSummary = CourtRow & {
   reviewCount: number;
   averageRating: number | null;
@@ -53,28 +59,19 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
   if (filters.useLocation) {
     const radius = filters.useLocation.radiusMeters ?? 5000;
     const limit = filters.limit ?? 50;
-    const { data, error } = (await supabase.rpc("courts_nearby", {
+    const { data, error } = await supabase.rpc("courts_nearby", {
       lat: filters.useLocation.lat,
       lng: filters.useLocation.lng,
       radius_m: radius,
       limit_count: limit,
-    })) as {
-      data: Array<
-        CourtRow & {
-          distance_m: number;
-          average_rating: number | null;
-          review_count: number;
-        }
-      > | null;
-      error: { message: string } | null;
-    };
+    });
 
     if (error) {
       console.error("Failed to fetch nearby courts", error);
       return [];
     }
 
-    const nearby = data ?? [];
+    const nearby = (data as NearbyCourtRow[] | null) ?? [];
     return nearby
       .filter((court) => {
         if (filters.isFree === undefined || filters.isFree === null) {
