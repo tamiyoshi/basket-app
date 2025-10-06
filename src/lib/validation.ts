@@ -81,10 +81,10 @@ export const createCourtSchema = z.object({
 });
 
 export const createReviewSchema = z.object({
-  courtId: z.string({ required_error: "コートIDが不正です" }),
+  courtId: z.string({ message: "コートIDが不正です" }),
   rating: z
     .coerce
-    .number({ required_error: "評価は必須です" })
+    .number({ message: "評価は必須です" })
     .int("1〜5の整数で入力してください")
     .min(1, "最低評価は1です")
     .max(5, "最高評価は5です"),
