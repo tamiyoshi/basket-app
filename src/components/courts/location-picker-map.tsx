@@ -64,7 +64,7 @@ export function LocationPickerMap({ value, onChange, className }: LocationPicker
 
         mapRef.current = map;
 
-        map.addListener("click", (event) => {
+        map.addListener("click", (event: google.maps.MapMouseEvent) => {
           const position = event.latLng;
           if (!position) {
             return;
