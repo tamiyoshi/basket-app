@@ -57,7 +57,7 @@ export const createCourtSchema = z.object({
   isFree: z.coerce.boolean({ message: "料金区分を選択してください" }),
   hoopCount: z
     .coerce
-    .number({ invalid_type_error: "リング数は数値で入力してください" })
+    .number({ message: "リング数は数値で入力してください" })
     .int("整数を入力してください")
     .min(0, "0以上を入力してください")
     .nullish()
