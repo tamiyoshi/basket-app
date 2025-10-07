@@ -5,7 +5,12 @@ create extension if not exists "uuid-ossp";
 create extension if not exists postgis;
 
 -- User role enum shared across tables
-create type if not exists user_role as enum ('user', 'admin');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'user_role') then
+    create type user_role as enum ('user', 'admin');
+  end if;
+end $$;
 
 -- Profiles table mirrors Supabase auth.users
 create table if not exists public.profiles (
