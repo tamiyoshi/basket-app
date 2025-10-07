@@ -6,20 +6,14 @@ import {
 
 import type { Database } from "@/types/database";
 
-function assertSupabaseEnv(name: "NEXT_PUBLIC_SUPABASE_URL" | "NEXT_PUBLIC_SUPABASE_ANON_KEY") {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-
-  return value;
-}
-
 export function createSupabaseServerClient() {
   const cookieStorePromise = cookies();
-  const supabaseUrl = assertSupabaseEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const supabaseKey = assertSupabaseEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase クライアント初期化用の環境変数が設定されていません");
+  }
 
   return createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
