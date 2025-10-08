@@ -184,7 +184,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                 <Link href="/submit">新しいコートを投稿</Link>
               </Button>
               {!isLoggedIn ? (
-                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
+                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto text-black">
                   <Link href="/login">Googleでログイン</Link>
                 </Button>
               ) : null}
