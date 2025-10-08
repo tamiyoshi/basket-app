@@ -41,6 +41,15 @@ export function CourtCard({ court, className }: CourtCardProps) {
               </span>
             ) : null}
           </div>
+          {court.facilityTags && court.facilityTags.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+              {court.facilityTags.map((tag) => (
+                <span key={tag} className="rounded-full border px-2 py-0.5">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="rounded-lg border bg-muted/40 px-3 py-2 text-right text-xs text-muted-foreground">
           <div className="flex items-center justify-end gap-1 text-sm font-semibold text-foreground">

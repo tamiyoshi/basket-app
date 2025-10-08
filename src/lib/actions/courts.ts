@@ -42,6 +42,18 @@ export async function createCourtAction(formData: FormData): Promise<CreateCourt
     surface: formData.get("surface"),
     openingHours: formData.get("openingHours"),
     notes: formData.get("notes"),
+    facilityTags: (() => {
+      const raw = formData.get("facilityTags");
+      if (typeof raw === "string" && raw.length > 0) {
+        try {
+          const parsed = JSON.parse(raw);
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          console.warn("Failed to parse facilityTags", error);
+        }
+      }
+      return [];
+    })(),
     photo: formData.get("photo"),
   });
 
@@ -61,6 +73,7 @@ export async function createCourtAction(formData: FormData): Promise<CreateCourt
     is_free: input.isFree,
     hoop_count: input.hoopCount ?? null,
     surface: input.surface,
+    facility_tags: input.facilityTags ?? [],
     opening_hours: input.openingHours,
     notes: input.notes,
     created_by: session.user.id,

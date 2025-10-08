@@ -77,6 +77,11 @@ export const createCourtSchema = z.object({
     .max(2000, "備考は2000文字以内で入力してください")
     .nullish()
     .transform((value) => (value ? value : null)),
+  facilityTags: z
+    .array(z.string())
+    .max(10, "タグは10個まで選択できます")
+    .optional()
+    .default([]),
   photo: imageFileSchema,
 });
 

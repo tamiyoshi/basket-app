@@ -129,6 +129,19 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
             </div>
           </dl>
 
+          {court.facility_tags && court.facility_tags.length > 0 ? (
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground">設備タグ</h3>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {court.facility_tags.map((tag) => (
+                  <span key={tag} className="rounded-full border px-2.5 py-1">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="space-y-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
               <Camera className="h-4 w-4" />

@@ -26,6 +26,12 @@ export async function SiteHeader() {
             コートを探す
           </Link>
           <Link
+            href="/ranking"
+            className="rounded-md px-3 py-2 font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+          >
+            人気ランキング
+          </Link>
+          <Link
             href="/submit"
             className="rounded-md px-3 py-2 font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
           >

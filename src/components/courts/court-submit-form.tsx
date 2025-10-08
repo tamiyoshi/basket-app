@@ -15,6 +15,15 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { LocationPickerMap } from "@/components/courts/location-picker-map";
 
+const FACILITY_TAG_OPTIONS = [
+  "駐車場",
+  "照明",
+  "トイレ",
+  "ベンチ",
+  "更衣室",
+  "自販機",
+] as const;
+
 type CourtSubmitFormProps = {
   className?: string;
 };
@@ -45,12 +54,14 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
       surface: "",
       openingHours: "",
       notes: "",
+      facilityTags: [],
       photo: null,
     },
   });
 
   const latitudeValue = form.watch("latitude");
   const longitudeValue = form.watch("longitude");
+  const selectedFacilityTags = form.watch("facilityTags") ?? [];
 
   const selectedLocation =
     typeof latitudeValue === "number" && typeof longitudeValue === "number"
@@ -65,6 +76,21 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
       return value.item(0) ?? null;
     },
   });
+
+  const handleToggleFacilityTag = (tag: string, checked: boolean) => {
+    const current = form.getValues("facilityTags") ?? [];
+    if (checked) {
+      if (!current.includes(tag)) {
+        form.setValue("facilityTags", [...current, tag], { shouldDirty: true });
+      }
+    } else {
+      form.setValue(
+        "facilityTags",
+        current.filter((item) => item !== tag),
+        { shouldDirty: true },
+      );
+    }
+  };
 
   const onSubmit = (values: FormValues) => {
     const formData = new FormData();
@@ -86,6 +112,7 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
     if (values.notes) {
       formData.append("notes", values.notes);
     }
+    formData.append("facilityTags", JSON.stringify(values.facilityTags ?? []));
     if (values.photo) {
       formData.append("photo", values.photo);
     }
@@ -110,6 +137,7 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
         surface: "",
         openingHours: "",
         notes: "",
+        facilityTags: [],
         photo: null,
       });
       if (photoInputRef.current) {
@@ -310,6 +338,35 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
         />
         <FieldError message={form.formState.errors.notes?.message} />
       </Field>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">設備タグ（複数選択可）</p>
+        <div className="flex flex-wrap gap-2 text-sm">
+          {FACILITY_TAG_OPTIONS.map((tag) => {
+            const checked = selectedFacilityTags.includes(tag);
+            return (
+              <label
+                key={tag}
+                className={cn(
+                  "flex items-center gap-2 rounded-full border px-3 py-1 transition",
+                  checked ? "border-primary bg-primary/10" : "border-input",
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => handleToggleFacilityTag(tag, event.target.checked)}
+                />
+                <span>{tag}</span>
+              </label>
+            );
+          })}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          該当する設備を選ぶと、トップページのタグフィルタから検索しやすくなります。
+        </p>
+        <FieldError message={form.formState.errors.facilityTags?.message} />
+      </div>
 
       <Field>
         <Label htmlFor="photo">写真（1枚まで）</Label>

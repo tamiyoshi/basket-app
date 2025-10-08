@@ -10,12 +10,14 @@ type NearbyCourtRow = CourtRow & {
   distance_m: number;
   average_rating: number | null;
   review_count: number;
+  facility_tags: string[] | null;
 };
 
 export type CourtSummary = CourtRow & {
   reviewCount: number;
   averageRating: number | null;
   distanceMeters?: number | null;
+  facilityTags?: string[];
 };
 
 export type CourtDetail = CourtRow & {
@@ -36,6 +38,7 @@ export type CourtSearchFilters = {
   isFree?: boolean | null;
   limit?: number;
   offset?: number;
+  facilityTag?: string | null;
   useLocation?: {
     lat: number;
     lng: number;
@@ -76,16 +79,20 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
     const nearby = (data as NearbyCourtRow[] | null) ?? [];
     return nearby
       .filter((court) => {
-        if (filters.isFree === undefined || filters.isFree === null) {
-          return true;
-        }
-        return court.is_free === filters.isFree;
+        const passesPrice =
+          filters.isFree === undefined || filters.isFree === null
+            ? true
+            : court.is_free === filters.isFree;
+        const passesTags =
+          !filters.facilityTag || (court.facility_tags ?? []).includes(filters.facilityTag);
+        return passesPrice && passesTags;
       })
       .map((court) => ({
         ...court,
         averageRating: court.average_rating ?? null,
         reviewCount: court.review_count ?? 0,
         distanceMeters: court.distance_m ?? null,
+        facilityTags: court.facility_tags ?? [],
       }));
   }
 
@@ -120,6 +127,10 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
 
   query = query.range(offset, offset + limit - 1);
 
+  if (filters.facilityTag) {
+    query = query.contains("facility_tags", [filters.facilityTag]);
+  }
+
   const { data, error } = await query.returns<CourtWithStatsRow[]>();
 
   if (error) {
@@ -148,6 +159,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
     reviewCount: Number(review_count ?? 0),
     averageRating: average_rating ?? null,
     distanceMeters: undefined,
+    facilityTags: rest.facility_tags ?? [],
   }));
 }
 
@@ -186,6 +198,10 @@ async function fetchCourtsFromBaseTable(params: {
     query = query.eq("is_free", isFree);
   }
 
+  if (filters.facilityTag) {
+    query = query.contains("facility_tags", [filters.facilityTag]);
+  }
+
   const { data, error } = await query;
 
   if (error) {
@@ -215,6 +231,7 @@ async function fetchCourtsFromBaseTable(params: {
       reviewCount,
       averageRating,
       distanceMeters: undefined,
+      facilityTags: court.facility_tags ?? [],
     } as CourtSummary;
   });
 }

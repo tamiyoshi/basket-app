@@ -34,11 +34,12 @@
 - `/` : Supabaseの`courts`テーブルからSSRで一覧を取得（無料/有料フィルタ、地図プレースホルダー付き）
 - 地図コンポーネントがGoogle Maps APIでコート位置をプロットし、位置情報許可時は現在地を中心に表示
 - `/courts/[id]` : コートの基本情報・写真・レビューをSSRで取得し、レビューリストを表示
-- `/submit` : ログイン済みユーザーのみ投稿フォームを表示。画像（JPEG/PNG/WebP, 5MB以下）付きでコート情報を投稿
+- `/submit` : ログイン済みユーザーのみ投稿フォームを表示。画像（JPEG/PNG/WebP, 5MB以下）付きでコート情報を投稿し、設備タグを複数指定可能
 - `/login` : Google OAuthによるログイン/ログアウト導線（`/auth/callback`でセッション交換）
 - `/auth/callback` : Supabaseから返却されたAuthorization CodeをCookieセッションに変換
   - 投稿フォームはServer Action経由で`courts`テーブルに書き込み、レビューは`reviews`テーブルへ即時保存
   - 位置情報利用時はSupabase RPC `courts_nearby` を利用し、PostGIS距離検索で近隣コートを表示
+  - `/ranking` : レビュー平均点と件数をもとにした人気コートランキング
 
 ## ディレクトリ構成ハイライト
 - `src/app/page.tsx` … SSRコート一覧とフィルタUI
@@ -47,7 +48,8 @@
 - `src/app/login/page.tsx` … ログイン状態確認とGoogleサインイン
 - `src/app/auth/callback/route.ts` … Supabase OAuthコールバック処理
 - `src/components/courts/court-card.tsx` … コートカードUI
-- `src/components/courts/court-submit-form.tsx` … React Hook Form + Server Actionによる投稿フォーム
+- `src/components/courts/court-submit-form.tsx` … React Hook Form + Server Actionによる投稿フォーム（地図ピッカー・設備タグ入力付き）
+- `src/app/ranking/page.tsx` … レビュー平均点順のコートランキングページ
 - `src/components/reviews/review-card.tsx` … レビュー表示コンポーネント
 - `src/components/reviews/review-form.tsx` … レビュー投稿フォーム
 - `src/components/auth/google-sign-in-button.tsx` … Googleサインインボタン

@@ -46,6 +46,7 @@ export type Database = {
           is_free: boolean;
           hoop_count: number | null;
           surface: string | null;
+          facility_tags: string[];
           notes: string | null;
           opening_hours: string | null;
           created_by: string;
@@ -61,6 +62,7 @@ export type Database = {
           is_free: boolean;
           hoop_count?: number | null;
           surface?: string | null;
+          facility_tags?: string[];
           notes?: string | null;
           opening_hours?: string | null;
           created_by: string;
@@ -76,6 +78,7 @@ export type Database = {
           is_free?: boolean;
           hoop_count?: number | null;
           surface?: string | null;
+          facility_tags?: string[];
           notes?: string | null;
           opening_hours?: string | null;
           created_by?: string;

@@ -20,6 +20,15 @@ const priceFilters = [
   { label: "有料", value: false },
 ] as const;
 
+const facilityTagOptions = [
+  { label: "駐車場", value: "駐車場" },
+  { label: "照明", value: "照明" },
+  { label: "トイレ", value: "トイレ" },
+  { label: "ベンチ", value: "ベンチ" },
+  { label: "更衣室", value: "更衣室" },
+  { label: "自販機", value: "自販機" },
+] as const;
+
 type HomePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
@@ -85,12 +94,25 @@ function parseNumberParam(value?: string | string[]) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function parseStringParam(value?: string | string[]) {
+  if (Array.isArray(value)) {
+    value = value[0];
+  }
+
+  if (!value) {
+    return undefined;
+  }
+
+  return value;
+}
+
 export default async function Home({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const isFree = parseBooleanParam(params?.isFree ?? params?.free);
   const lat = parseNumberParam(params?.lat);
   const lng = parseNumberParam(params?.lng);
   const radius = parseNumberParam(params?.radius);
+  const facilityTag = parseStringParam(params?.tag);
   const pageParam = parseNumberParam(params?.page);
   const page = pageParam && pageParam > 0 ? Math.floor(pageParam) : 1;
   const limit = 12;
@@ -110,8 +132,8 @@ export default async function Home({ searchParams }: HomePageProps) {
 
   try {
     const filters = useLocation
-      ? { isFree, limit, useLocation }
-      : { isFree, limit, offset };
+      ? { isFree, limit, useLocation, facilityTag }
+      : { isFree, limit, offset, facilityTag };
     courts = await getCourts(filters);
   } catch (error) {
     fetchError = error instanceof Error ? error.message : "コート情報の取得に失敗しました";
@@ -271,6 +293,35 @@ export default async function Home({ searchParams }: HomePageProps) {
                     )}
                   >
                     {filter.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              設備タグ
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {facilityTagOptions.map((option) => {
+                const isActive = facilityTag === option.value;
+                const href = buildHref(params, {
+                  tag: isActive ? undefined : option.value,
+                  page: undefined,
+                });
+
+                return (
+                  <Link
+                    key={option.value}
+                    href={href}
+                    className={cn(
+                      "rounded-full border px-4 py-1 text-sm transition",
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-input hover:border-primary hover:text-primary",
+                    )}
+                  >
+                    {option.label}
                   </Link>
                 );
               })}

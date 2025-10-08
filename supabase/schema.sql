@@ -1,8 +1,15 @@
 -- Run via Supabase SQL editor or CLI migrations
 
 -- Enable required extensions
-create extension if not exists "uuid-ossp";
-create extension if not exists postgis;
+do $$
+begin
+  if not exists (select 1 from pg_available_extensions where name = 'uuid-ossp') then
+    execute 'create extension if not exists "uuid-ossp";';
+  end if;
+  if not exists (select 1 from pg_available_extensions where name = 'postgis') then
+    execute 'create extension if not exists postgis;';
+  end if;
+end $$;
 
 -- User role enum shared across tables
 do $$
@@ -39,6 +46,7 @@ create table if not exists public.courts (
   is_free boolean not null default true,
   hoop_count integer,
   surface text,
+  facility_tags text[] default '{}',
   notes text,
   opening_hours text,
   created_by uuid not null references auth.users(id) on delete cascade,
@@ -50,12 +58,12 @@ create table if not exists public.courts (
 do $$
 begin
   if not exists (
-    select 1 from pg_indexes where tablename = 'courts' and indexname = 'courts_geom_gist'
+    select 1 from pg_indexes where schemaname = 'public' and tablename = 'courts' and indexname = 'courts_geom_gist'
   ) then
     execute 'create index courts_geom_gist on public.courts using gist (geom);';
   end if;
   if not exists (
-    select 1 from pg_indexes where tablename = 'courts' and indexname = 'courts_created_by_idx'
+    select 1 from pg_indexes where schemaname = 'public' and tablename = 'courts' and indexname = 'courts_created_by_idx'
   ) then
     execute 'create index courts_created_by_idx on public.courts (created_by);';
   end if;
@@ -87,8 +95,7 @@ create table if not exists public.reviews (
 create index if not exists reviews_court_id_idx on public.reviews (court_id);
 create index if not exists reviews_author_id_idx on public.reviews (author_id);
 
--- User role enum
--- Helper view for court aggregates (optional)
+-- View aggregating stats
 create or replace view public.court_with_stats as
 select
   c.*,
@@ -114,6 +121,7 @@ returns table (
   is_free boolean,
   hoop_count integer,
   surface text,
+  facility_tags text[],
   notes text,
   opening_hours text,
   created_by uuid,
@@ -132,6 +140,7 @@ as $$
     c.is_free,
     c.hoop_count,
     c.surface,
+    c.facility_tags,
     c.notes,
     c.opening_hours,
     c.created_by,
