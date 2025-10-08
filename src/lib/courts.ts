@@ -210,7 +210,11 @@ async function fetchCourtsFromBaseTable(params: {
     query = query.contains("facility_tags", [facilityTag]);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await query.returns<
+    (CourtRow & {
+      reviews: Pick<ReviewRow, "rating">[];
+    })[]
+  >();
 
   if (error) {
     const message = error.message ?? String(error);
@@ -238,7 +242,7 @@ async function fetchCourtsFromBaseTable(params: {
   }
 
   return (data ?? []).map((court) => {
-    const { reviews, ...rest } = court;
+    const { reviews, facility_tags, ...rest } = court;
     const { averageRating, reviewCount } = calculateRatingSummary(reviews ?? []);
 
     return {
@@ -246,7 +250,8 @@ async function fetchCourtsFromBaseTable(params: {
       reviewCount,
       averageRating,
       distanceMeters: undefined,
-      facilityTags: court.facility_tags ?? [],
+      facility_tags: facility_tags ?? [],
+      facilityTags: facility_tags ?? [],
     } as CourtSummary;
   });
 }
