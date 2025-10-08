@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass, Filter, MapPinned } from "lucide-react";
+import { Compass, Filter, MapPinned, Sparkles } from "lucide-react";
 
 import { CourtCard } from "@/components/courts/court-card";
 import { CourtMap } from "@/components/courts/court-map";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getCourts } from "@/lib/courts";
 import { cn } from "@/lib/utils";
 import { LocationFilter } from "@/components/courts/location-filter";
+import { getSupabaseSession } from "@/lib/auth";
 
 const distanceFilters = [
   { label: "1km", value: 1 },
@@ -108,6 +109,8 @@ function parseStringParam(value?: string | string[]) {
 
 export default async function Home({ searchParams }: HomePageProps) {
   const params = await searchParams;
+  const session = await getSupabaseSession();
+  const isLoggedIn = Boolean(session?.user);
   const isFree = parseBooleanParam(params?.isFree ?? params?.free);
   const lat = parseNumberParam(params?.lat);
   const lng = parseNumberParam(params?.lng);
@@ -180,30 +183,41 @@ export default async function Home({ searchParams }: HomePageProps) {
               <Button asChild size="lg">
                 <Link href="/submit">新しいコートを投稿</Link>
               </Button>
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              >
-                <Link href="/login">Googleでログイン</Link>
-              </Button>
+              {!isLoggedIn ? (
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                >
+                  <Link href="/login">Googleでログイン</Link>
+                </Button>
+              ) : null}
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="pointer-events-auto absolute bottom-6 left-1/2 z-30 w-full max-w-3xl -translate-x-1/2 px-4 sm:px-6">
-            <div className="rounded-3xl border border-white/15 bg-background/95 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                  <MapPinned className="h-4 w-4" />
-                  現在地から探す
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  位置情報を許可すると半径を指定して近くのコートを優先表示します。
-                </p>
-                <LocationFilter className="space-y-4" />
-              </div>
-            </div>
+      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+        <div className="rounded-[28px] border border-border/70 bg-card/90 p-6 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+            <MapPinned className="h-4 w-4 text-primary" />
+            現在地から探す
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            位置情報を許可すると半径を指定して近くのコートを優先表示します。旅行先や遠征でも最寄りのピックアップゲームをすばやく発見。
+          </p>
+          <LocationFilter className="mt-5 space-y-4" />
+        </div>
+        <div className="rounded-[28px] border border-border/70 bg-gradient-to-br from-primary/15 via-background to-background p-6 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <Sparkles className="h-4 w-4" />
+            コミュニティからの注目ポイント
+          </div>
+          <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+            <p>・ レビューの平均点で自動的にランキングが更新され、人気コートが一目でわかります。</p>
+            <p>・ 設備タグや料金フィルタを組み合わせて、練習スタイルに合うコートだけを表示。</p>
+            <p>・ Supabase + Google Maps のリアルタイム連携で、投稿後すぐに地図へ反映されます。</p>
           </div>
         </div>
       </section>
