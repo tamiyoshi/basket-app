@@ -13,7 +13,11 @@ const radiusOptions = [
   { label: "10km", value: 10000 },
 ] as const;
 
-export function LocationFilter() {
+type LocationFilterProps = {
+  className?: string;
+};
+
+export function LocationFilter({ className }: LocationFilterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLocating, setIsLocating] = useState(false);
@@ -70,7 +74,7 @@ export function LocationFilter() {
   };
 
   return (
-    <div className="mt-6 space-y-3">
+    <div className={cn("space-y-3", className)}>
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={handleUseCurrentLocation} size="sm" disabled={isLocating}>
           {isLocating ? "取得中..." : "現在地付近で検索"}

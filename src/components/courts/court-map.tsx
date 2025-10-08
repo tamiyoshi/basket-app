@@ -147,20 +147,30 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
 
   if (loadError) {
     return (
-      <div className={cn("flex h-48 items-center justify-center rounded-lg border bg-card p-6 text-sm text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "flex h-64 items-center justify-center rounded-3xl border border-border/60 bg-card p-6 text-sm text-muted-foreground shadow-lg",
+          className,
+        )}
+      >
         {loadError}
       </div>
     );
   }
 
   return (
-    <div className={cn("relative h-48 rounded-xl border bg-card", className)}>
+    <div
+      className={cn(
+        "relative h-64 overflow-hidden rounded-3xl border border-border/70 bg-card shadow-xl",
+        className,
+      )}
+    >
       {isLoading ? (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
           地図を読み込んでいます...
         </div>
       ) : null}
-      <div ref={containerRef} className="h-full w-full rounded-xl" />
+      <div ref={containerRef} className="h-full w-full" />
     </div>
   );
 }

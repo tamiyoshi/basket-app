@@ -149,62 +149,85 @@ export default async function Home({ searchParams }: HomePageProps) {
   });
 
   return (
-    <div className="space-y-12">
-      <section className="space-y-6">
-        <span className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-          <Compass className="h-3.5 w-3.5" />
-          全国の屋外バスケットコート検索MVP
-        </span>
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              近くのバスケットコートをもっと気軽に。
-            </h1>
-            <p className="text-base text-muted-foreground">
-              HoopSpotterは、屋外バスケットコートを地図から探してレビューや情報を共有できるコミュニティアプリです。SSRで地図＋リスト表示を行い、ユーザー投稿によって最新情報を保ちます。
-            </p>
+    <div className="space-y-16">
+      <section className="relative">
+        <div className="relative overflow-hidden rounded-[36px] border border-border/60 bg-slate-950 shadow-[0_40px_120px_rgba(15,23,42,0.45)]">
+          <CourtMap
+            courts={courts}
+            location={useLocation}
+            className="z-0 h-[560px] rounded-[36px] border-none bg-transparent shadow-none"
+          />
+          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]" />
+          <div className="pointer-events-none absolute -left-20 top-1/2 z-10 hidden h-64 w-64 -translate-y-1/2 rounded-full bg-primary/35 blur-3xl sm:block" />
+          <div className="pointer-events-none absolute -right-10 top-10 z-10 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-full bg-gradient-to-r from-slate-950/80 via-slate-900/40 to-transparent sm:w-2/3" />
+
+          <div className="pointer-events-auto absolute left-6 top-6 z-20 max-w-xl space-y-6 text-white sm:left-10 sm:top-10 md:left-14 md:top-14">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1 text-xs font-medium uppercase tracking-wide text-white/80">
+              <Compass className="h-3.5 w-3.5" />
+              HoopSpotter Beta
+            </span>
+            <div className="space-y-4 text-balance">
+              <h1 className="text-3xl font-semibold sm:text-4xl lg:text-5xl">
+                地図から見つける、<br className="hidden sm:block" />
+                最高のストリートコート。
+              </h1>
+              <p className="text-sm text-white/80 sm:text-base">
+                現在地から近い屋外コートをすばやくチェック。レビューや設備タグで自分に合った場所が見つかります。
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
                 <Link href="/submit">新しいコートを投稿</Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              >
                 <Link href="/login">Googleでログイン</Link>
               </Button>
             </div>
           </div>
-          <div className="rounded-xl border bg-card p-6 shadow-sm">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-              <MapPinned className="h-4 w-4" />
-              地図プレビュー（開発予定）
-            </h2>
-            <CourtMap courts={courts} location={useLocation} className="mt-4" />
-            <p className="mt-3 text-xs text-muted-foreground">
-              Supabaseの近傍検索（PostGIS + GIST）とGoogle Mapsで現在地周辺のコートを可視化します。
-            </p>
-            <LocationFilter />
+
+          <div className="pointer-events-auto absolute bottom-6 left-1/2 z-30 w-full max-w-3xl -translate-x-1/2 px-4 sm:px-6">
+            <div className="rounded-3xl border border-white/15 bg-background/95 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.35)] backdrop-blur">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <MapPinned className="h-4 w-4" />
+                  現在地から探す
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  位置情報を許可すると半径を指定して近くのコートを優先表示します。
+                </p>
+                <LocationFilter className="space-y-4" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-8 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
-          <div className="space-y-4">
-            <header className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold">コート一覧</h2>
-                <p className="text-sm text-muted-foreground">
-                  SupabaseからSSRで取得した最新のコート情報を表示します。
+      <section className="grid gap-10 xl:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <header className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold">最新のコート情報</h2>
+              <p className="text-sm text-muted-foreground">
+                SupabaseからSSRで取得したコミュニティ投稿の一覧です。
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
               <Link href="/submit">コートを追加</Link>
             </Button>
           </header>
+
           {fetchError ? (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
+            <div className="rounded-3xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
               {fetchError}
             </div>
           ) : courts.length === 0 ? (
-            <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
+            <div className="rounded-3xl border border-dashed bg-muted/40 p-6 text-sm text-muted-foreground">
               条件に合うコートがまだ登録されていません。位置情報を許可するか、
               <Link href="/submit" className="ml-1 text-primary underline">
                 新しいコートを投稿
@@ -212,17 +235,16 @@ export default async function Home({ searchParams }: HomePageProps) {
               してコミュニティを盛り上げましょう。
             </div>
           ) : (
-            <ul className="grid gap-4">
+            <ul className="grid gap-4 lg:grid-cols-2">
               {courts.map((court) => (
                 <CourtCard key={court.id} court={court} />
               ))}
             </ul>
           )}
-          <div className="flex items-center justify-between border-t pt-4 text-sm">
-            <div>
-              現在ページ: {page}
-            </div>
-            <div className="flex items-center gap-2">
+
+          <div className="rounded-3xl border bg-card/80 p-4 text-sm text-muted-foreground shadow-sm sm:flex sm:items-center sm:justify-between">
+            <span>現在ページ: {page}</span>
+            <div className="mt-3 flex items-center gap-2 sm:mt-0">
               {hasPrevPage ? (
                 <Button variant="outline" size="sm" asChild>
                   <Link href={prevPageHref}>前へ</Link>
@@ -245,90 +267,100 @@ export default async function Home({ searchParams }: HomePageProps) {
           </div>
         </div>
 
-        <aside className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <Filter className="h-4 w-4" />
-            条件で絞り込む
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              距離（開発予定）
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {distanceFilters.map((filter) => (
-                <button
-                  key={filter.value}
-                  type="button"
-                  className="rounded-full border border-input px-4 py-1 text-sm text-muted-foreground"
-                  disabled
-                >
-                  {filter.label}
-                </button>
-              ))}
+        <aside className="space-y-6">
+          <div className="rounded-[28px] border border-border/70 bg-card/80 p-6 shadow-lg backdrop-blur-sm">
+            <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              条件で絞り込む
             </div>
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              料金
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {priceFilters.map((filter) => {
-                const isActive = isFree === filter.value;
-    const href =
-      filter.value === undefined
-                    ? buildHref(params, { isFree: undefined })
-                    : buildHref(params, {
-                        isFree: filter.value ? "true" : "false",
-                      });
+            <div className="mt-6 space-y-5">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span>距離</span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    soon
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {distanceFilters.map((filter) => (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      className="rounded-full border border-dashed border-input px-4 py-1 text-sm text-muted-foreground/70"
+                      disabled
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-                return (
-                  <Link
-                    key={filter.label}
-                    href={href}
-                    className={cn(
-                      "rounded-full border px-4 py-1 text-sm transition",
-                      isActive
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-input hover:border-primary hover:text-primary",
-                    )}
-                  >
-                    {filter.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              設備タグ
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {facilityTagOptions.map((option) => {
-                const isActive = facilityTag === option.value;
-                const href = buildHref(params, {
-                  tag: isActive ? undefined : option.value,
-                  page: undefined,
-                });
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  料金
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {priceFilters.map((filter) => {
+                    const isActive = isFree === filter.value;
+                    const href =
+                      filter.value === undefined
+                        ? buildHref(params, { isFree: undefined })
+                        : buildHref(params, {
+                            isFree: filter.value ? "true" : "false",
+                          });
 
-                return (
-                  <Link
-                    key={option.value}
-                    href={href}
-                    className={cn(
-                      "rounded-full border px-4 py-1 text-sm transition",
-                      isActive
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-input hover:border-primary hover:text-primary",
-                    )}
-                  >
-                    {option.label}
-                  </Link>
-                );
-              })}
+                    return (
+                      <Link
+                        key={filter.label}
+                        href={href}
+                        className={cn(
+                          "rounded-full border px-4 py-1 text-sm transition",
+                          isActive
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input hover:border-primary hover:text-primary",
+                        )}
+                      >
+                        {filter.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  設備タグ
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {facilityTagOptions.map((option) => {
+                    const isActive = facilityTag === option.value;
+                    const href = buildHref(params, {
+                      tag: isActive ? undefined : option.value,
+                      page: undefined,
+                    });
+
+                    return (
+                      <Link
+                        key={option.value}
+                        href={href}
+                        className={cn(
+                          "rounded-full border px-3 py-1 text-sm transition",
+                          isActive
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input hover:border-primary hover:text-primary",
+                        )}
+                      >
+                        {option.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
-          <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            投稿・レビューにはGoogleログインが必要です。Supabase Authと連携し、即時公開運用を想定しています。
+
+          <div className="rounded-[28px] border border-dashed bg-muted/40 p-5 text-sm text-muted-foreground">
+            投稿・レビューにはGoogleログインが必要です。Supabase Authと連携し、コミュニティの信頼性を保ちながら即時公開を想定しています。
           </div>
         </aside>
       </section>

@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:dummy": "node scripts/seed-dummy-data.mjs"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.0.1",
