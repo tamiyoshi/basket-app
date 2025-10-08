@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass, Filter, MapPinned, Sparkles } from "lucide-react";
+import { Filter, MapPinned, Sparkles } from "lucide-react";
 
 import { CourtCard } from "@/components/courts/court-card";
 import { CourtMap } from "@/components/courts/court-map";
@@ -150,50 +150,72 @@ export default async function Home({ searchParams }: HomePageProps) {
   const prevPageHref = buildHref(params, {
     page: hasPrevPage && previousPage > 1 ? String(previousPage) : undefined,
   });
+  const mapHasCourts = courts.some(
+    (court) => typeof court.latitude === "number" && typeof court.longitude === "number",
+  );
 
   return (
     <div className="space-y-16">
-      <section className="relative">
-        <div className="relative overflow-hidden rounded-[36px] border border-border/60 bg-slate-950 shadow-[0_40px_120px_rgba(15,23,42,0.45)]">
+      <section className="space-y-8">
+        <div className="overflow-hidden rounded-[40px] border border-border/60 shadow-[0_30px_120px_rgba(15,23,42,0.45)]">
           <CourtMap
             courts={courts}
             location={useLocation}
-            className="z-0 h-[560px] rounded-[36px] border-none bg-transparent shadow-none"
+            className="h-[80vh] min-h-[420px] w-full border-none shadow-none"
           />
-          <div className="pointer-events-none absolute inset-0 z-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.18),_transparent_60%)]" />
-          <div className="pointer-events-none absolute -left-20 top-1/2 z-10 hidden h-64 w-64 -translate-y-1/2 rounded-full bg-primary/35 blur-3xl sm:block" />
-          <div className="pointer-events-none absolute -right-10 top-10 z-10 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-full bg-gradient-to-r from-slate-950/80 via-slate-900/40 to-transparent sm:w-2/3" />
-
-          <div className="pointer-events-auto absolute left-6 top-6 z-20 max-w-xl space-y-6 text-white sm:left-10 sm:top-10 md:left-14 md:top-14">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-1 text-xs font-medium uppercase tracking-wide text-white/80">
-              <Compass className="h-3.5 w-3.5" />
-              HoopSpotter Beta
-            </span>
+        </div>
+        {!mapHasCourts ? (
+          <div className="rounded-[28px] border border-dashed bg-muted/40 p-5 text-sm text-muted-foreground">
+            コートがまだ表示されていません。地図をドラッグして別エリアを表示するか、検索条件をリセットしてみてください。
+          </div>
+        ) : null}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <div className="space-y-5 rounded-[32px] border border-border/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8 text-white shadow-[0_24px_90px_rgba(15,23,42,0.5)]">
             <div className="space-y-4 text-balance">
-              <h1 className="text-3xl font-semibold sm:text-4xl lg:text-5xl">
-                地図から見つける、<br className="hidden sm:block" />
-                最高のストリートコート。
+              <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
+                全国のストリートコートを、地図で直感的に。
               </h1>
               <p className="text-sm text-white/80 sm:text-base">
-                現在地から近い屋外コートをすばやくチェック。レビューや設備タグで自分に合った場所が見つかります。
+                行きたい街のバスケットコートを検索して、設備やレビューを確認。旅先でもすぐにプレーできる場所を見つけられます。
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button asChild size="lg">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link href="/submit">新しいコートを投稿</Link>
               </Button>
               {!isLoggedIn ? (
-                <Button
-                  asChild
-                  size="lg"
-                  variant="outline"
-                  className="border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                >
+                <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
                   <Link href="/login">Googleでログイン</Link>
                 </Button>
               ) : null}
             </div>
+            <ul className="space-y-2 text-sm text-white/75">
+              <li className="flex items-start gap-2">
+                <MapPinned className="mt-1 h-4 w-4 text-primary" />
+                <span>マップをドラッグしてコートを探し、ピンをタップすると詳細ページに移動できます。</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <Sparkles className="mt-1 h-4 w-4 text-primary" />
+                <span>投稿に写真やレビューを追加すると、コミュニティの精度が向上します。</span>
+              </li>
+            </ul>
+          </div>
+          <div className="rounded-[32px] border border-border/60 bg-card/95 p-8 shadow-xl backdrop-blur-sm">
+            <h2 className="text-lg font-semibold text-foreground">最短でコートにたどり着くには</h2>
+            <ol className="mt-4 space-y-4 text-sm text-muted-foreground">
+              <li>
+                <span className="font-medium text-foreground">1. 現在地を設定</span>
+                <p>位置情報を許可すると、近くのコートが自動的に優先表示されます。</p>
+              </li>
+              <li>
+                <span className="font-medium text-foreground">2. タグと料金で絞り込み</span>
+                <p>駐車場や照明などの条件を選ぶと、目的に合うコートが見つかります。</p>
+              </li>
+              <li>
+                <span className="font-medium text-foreground">3. レビューをチェック</span>
+                <p>コミュニティの声を参考に、雰囲気や混雑状況を確認しましょう。</p>
+              </li>
+            </ol>
           </div>
         </div>
       </section>
@@ -204,7 +226,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <MapPinned className="h-4 w-4 text-primary" />
             現在地から探す
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             位置情報を許可すると半径を指定して近くのコートを優先表示します。旅行先や遠征でも最寄りのピックアップゲームをすばやく発見。
           </p>
           <LocationFilter className="mt-5 space-y-4" />
@@ -214,11 +236,20 @@ export default async function Home({ searchParams }: HomePageProps) {
             <Sparkles className="h-4 w-4" />
             コミュニティからの注目ポイント
           </div>
-          <div className="mt-4 space-y-3 text-sm text-muted-foreground">
-            <p>・ レビューの平均点で自動的にランキングが更新され、人気コートが一目でわかります。</p>
-            <p>・ 設備タグや料金フィルタを組み合わせて、練習スタイルに合うコートだけを表示。</p>
-            <p>・ Supabase + Google Maps のリアルタイム連携で、投稿後すぐに地図へ反映されます。</p>
-          </div>
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/70" />
+              <span>レビュー平均点で自動的にランキングが更新され、人気コートが一目でわかります。</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/70" />
+              <span>設備タグや料金フィルタを組み合わせて、練習スタイルに合うコートだけを表示できます。</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/70" />
+              <span>Supabase と Google Maps の連携で、投稿後すぐに地図へ反映されるスピード感。</span>
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -231,7 +262,7 @@ export default async function Home({ searchParams }: HomePageProps) {
                 SupabaseからSSRで取得したコミュニティ投稿の一覧です。
               </p>
             </div>
-            <Button asChild variant="outline" size="sm">
+            <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
               <Link href="/submit">コートを追加</Link>
             </Button>
           </header>
@@ -256,9 +287,9 @@ export default async function Home({ searchParams }: HomePageProps) {
             </ul>
           )}
 
-          <div className="rounded-3xl border bg-card/80 p-4 text-sm text-muted-foreground shadow-sm sm:flex sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 rounded-3xl border bg-card/80 p-4 text-sm text-muted-foreground shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <span>現在ページ: {page}</span>
-            <div className="mt-3 flex items-center gap-2 sm:mt-0">
+            <div className="flex items-center gap-2">
               {hasPrevPage ? (
                 <Button variant="outline" size="sm" asChild>
                   <Link href={prevPageHref}>前へ</Link>

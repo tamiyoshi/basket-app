@@ -23,11 +23,50 @@ export function createSupabaseServerClient() {
       },
       async set(name: string, value: string, options: CookieOptions) {
         const cookieStore = await cookieStorePromise;
-        cookieStore.set({ name, value, ...options });
+        const mutableCookies = cookieStore as unknown as {
+          set?: (options: { name: string; value: string } & CookieOptions) => void;
+        };
+        if (typeof mutableCookies.set !== "function") {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("Supabase cookie set skipped: not in a mutable cookies context");
+          }
+          return;
+        }
+        try {
+          mutableCookies.set({ name, value, ...options });
+        } catch (error) {
+          if (process.env.NODE_ENV === "development") {
+            console.warn("Supabase cookie set failed:", error);
+          }
+        }
       },
       async remove(name: string, options: CookieOptions) {
         const cookieStore = await cookieStorePromise;
-        cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+        const mutableCookies = cookieStore as unknown as {
+          delete?: (name: string, options?: CookieOptions) => void;
+          set?: (options: { name: string; value: string } & CookieOptions) => void;
+        };
+        if (typeof mutableCookies.delete === "function") {
+          try {
+            mutableCookies.delete(name, options);
+            return;
+          } catch (error) {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("Supabase cookie delete failed:", error);
+            }
+          }
+        }
+        if (typeof mutableCookies.set === "function") {
+          try {
+            mutableCookies.set({ name, value: "", ...options, maxAge: 0 });
+          } catch (error) {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("Supabase cookie fallback set failed:", error);
+            }
+          }
+        } else if (process.env.NODE_ENV === "development") {
+          console.warn("Supabase cookie remove skipped: not in a mutable cookies context");
+        }
       },
     },
   });

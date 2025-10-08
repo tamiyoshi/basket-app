@@ -74,12 +74,22 @@ export function LocationFilter({ className }: LocationFilterProps) {
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={handleUseCurrentLocation} size="sm" disabled={isLocating}>
+    <div className={cn("space-y-4", className)}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <Button
+          onClick={handleUseCurrentLocation}
+          size="sm"
+          disabled={isLocating}
+          className="w-full justify-center sm:w-auto"
+        >
           {isLocating ? "取得中..." : "現在地付近で検索"}
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleClear}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleClear}
+          className="w-full justify-center sm:w-auto"
+        >
           位置情報をリセット
         </Button>
       </div>
@@ -90,7 +100,7 @@ export function LocationFilter({ className }: LocationFilterProps) {
             type="button"
             onClick={() => handleRadiusChange(option.value)}
             className={cn(
-              "rounded-full border px-3 py-1 transition",
+              "flex-1 min-w-[72px] rounded-full border px-3 py-1 text-xs transition sm:flex-none sm:text-sm",
               activeRadius === option.value
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-input hover:border-primary hover:text-primary",
@@ -101,11 +111,11 @@ export function LocationFilter({ className }: LocationFilterProps) {
         ))}
       </div>
       {searchParams.get("lat") && searchParams.get("lng") ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           現在地: 緯度 {searchParams.get("lat")}, 経度 {searchParams.get("lng")} / 半径 {activeRadius / 1000}km
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs leading-relaxed text-muted-foreground">
           位置情報を許可すると近くのコートを優先表示します。
         </p>
       )}
