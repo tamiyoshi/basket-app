@@ -142,6 +142,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
         limit,
         offset,
         isFree: filters.isFree,
+        facilityTag: filters.facilityTag,
       });
     }
 
@@ -168,8 +169,9 @@ async function fetchCourtsFromBaseTable(params: {
   limit: number;
   offset: number;
   isFree?: boolean | null;
+  facilityTag?: string | null;
 }) {
-  const { supabase, limit, offset, isFree } = params;
+  const { supabase, limit, offset, isFree, facilityTag } = params;
 
   let query = supabase
     .from("courts")
@@ -198,8 +200,8 @@ async function fetchCourtsFromBaseTable(params: {
     query = query.eq("is_free", isFree);
   }
 
-  if (filters.facilityTag) {
-    query = query.contains("facility_tags", [filters.facilityTag]);
+  if (facilityTag) {
+    query = query.contains("facility_tags", [facilityTag]);
   }
 
   const { data, error } = await query;
@@ -209,6 +211,13 @@ async function fetchCourtsFromBaseTable(params: {
     if (message.includes("public.courts")) {
       console.warn(
         "Supabase schema 未適用のため courts テーブルにアクセスできません。supabase/schema.sql を適用してください。",
+      );
+      return [];
+    }
+
+    if (message.includes("facility_tags")) {
+      console.warn(
+        "facility_tags カラムが存在しません。最新の schema.sql を適用してください。",
       );
       return [];
     }

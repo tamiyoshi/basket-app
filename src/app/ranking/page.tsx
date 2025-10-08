@@ -56,21 +56,16 @@ export default async function RankingPage() {
     );
   }
 
-  const courts: Array<{
-    id: string;
-    name: string;
-    address: string;
-    averageRating: number | null;
-    reviewCount: number;
-    facilityTags: string[];
-  }> = (data as RankingRow[] | null)?.map((row) => ({
+  const rows: RankingRow[] = Array.isArray(data) ? (data as RankingRow[]) : [];
+
+  const courts = rows.map((row) => ({
     id: row.id,
     name: row.name,
     address: row.address,
     averageRating: row.average_rating,
     reviewCount: Number(row.review_count ?? 0),
     facilityTags: row.facility_tags ?? [],
-  })) ?? [];
+  }));
 
   return (
     <section className="mx-auto max-w-4xl space-y-6 py-10">
