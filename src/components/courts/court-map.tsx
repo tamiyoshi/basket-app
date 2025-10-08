@@ -128,7 +128,7 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
           fullscreenControl: false,
           zoomControl: true,
           clickableIcons: false,
-          gestureHandling: "greedy",
+          gestureHandling: "cooperative",
           styles: MAP_STYLES,
           backgroundColor: "#0f172a",
         });
