@@ -6,6 +6,10 @@ export type ReviewRow = Database["public"]["Tables"]["reviews"]["Row"];
 export type CourtPhotoRow = Database["public"]["Tables"]["court_photos"]["Row"];
 export type CourtWithStatsRow = Database["public"]["Views"]["court_with_stats"]["Row"];
 
+type CourtWithStatsRowWithTags = CourtWithStatsRow & {
+  facility_tags: string[] | null;
+};
+
 type NearbyCourtRow = CourtRow & {
   distance_m: number;
   average_rating: number | null;
@@ -132,7 +136,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
     query = query.contains("facility_tags", [filters.facilityTag]);
   }
 
-  const { data, error } = await query.returns<CourtWithStatsRow[]>();
+  const { data, error } = await query.returns<CourtWithStatsRowWithTags[]>();
 
   if (error) {
     const message = error?.message ?? String(error);
