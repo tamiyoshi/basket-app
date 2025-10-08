@@ -24,7 +24,8 @@ export default async function RankingPage() {
     .select("id, name, address, average_rating, review_count, facility_tags")
     .order("average_rating", { ascending: false, nullsFirst: false })
     .order("review_count", { ascending: false, nullsFirst: false })
-    .limit(20);
+    .limit(20)
+    .returns<RankingRow[]>();
 
   if (error) {
     const message = error.message ?? "ランキング情報の取得に失敗しました";
@@ -56,7 +57,7 @@ export default async function RankingPage() {
     );
   }
 
-  const rows: RankingRow[] = Array.isArray(data) ? (data as RankingRow[]) : [];
+  const rows = data ?? [];
 
   const courts = rows.map((row) => ({
     id: row.id,
