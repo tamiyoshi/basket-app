@@ -110,6 +110,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
       is_free,
       hoop_count,
       surface,
+      facility_tags,
       notes,
       opening_hours,
       created_by,
@@ -155,12 +156,13 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
     throw new Error(message ?? "コート情報の取得に失敗しました");
   }
 
-  return (data ?? []).map(({ average_rating, review_count, ...rest }) => ({
+  return (data ?? []).map(({ average_rating, review_count, facility_tags, ...rest }) => ({
     ...rest,
+    facility_tags: facility_tags ?? [],
     reviewCount: Number(review_count ?? 0),
     averageRating: average_rating ?? null,
     distanceMeters: undefined,
-    facilityTags: rest.facility_tags ?? [],
+    facilityTags: facility_tags ?? [],
   }));
 }
 
