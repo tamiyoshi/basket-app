@@ -405,7 +405,9 @@ export default async function Home({ searchParams }: HomePageProps) {
           </div>
 
           <div className="rounded-[28px] border border-dashed bg-muted/40 p-5 text-sm text-muted-foreground">
-            投稿・レビューにはGoogleログインが必要です。Supabase Authと連携し、コミュニティの信頼性を保ちながら即時公開を想定しています。
+            {isLoggedIn
+              ? "ログイン中です。コートを投稿したり、レビューで情報を共有できます。"
+              : "コートの投稿やレビューにはGoogleログインが必要です。ログインするとコミュニティに情報を共有できます。"}
           </div>
         </aside>
       </section>

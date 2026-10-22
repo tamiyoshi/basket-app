@@ -2,13 +2,12 @@ import Link from "next/link";
 
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
-import { getCurrentProfile, getSupabaseSession } from "@/lib/auth";
+import { getSessionWithProfile } from "@/lib/auth";
 
 import { signOut } from "./actions";
 
 export default async function LoginPage() {
-  const session = await getSupabaseSession();
-  const profile = await getCurrentProfile();
+  const { session, profile } = await getSessionWithProfile();
 
   if (session) {
     return (

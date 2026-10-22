@@ -2,11 +2,10 @@ import Link from "next/link";
 
 import { CourtSubmitForm } from "@/components/courts/court-submit-form";
 import { Button } from "@/components/ui/button";
-import { getCurrentProfile, getSupabaseSession } from "@/lib/auth";
+import { getSessionWithProfile } from "@/lib/auth";
 
 export default async function SubmitPage() {
-  const session = await getSupabaseSession();
-  const profile = await getCurrentProfile();
+  const { session, profile } = await getSessionWithProfile();
 
   if (!session) {
     return (
