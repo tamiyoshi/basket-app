@@ -186,6 +186,7 @@ export type Database = {
           is_free: boolean;
           hoop_count: number | null;
           surface: string | null;
+          facility_tags: string[];
           notes: string | null;
           opening_hours: string | null;
           created_by: string;
@@ -212,13 +213,12 @@ export type Database = {
           latitude: number;
           longitude: number;
           is_free: boolean;
+          facility_tags: string[];
           hoop_count: number | null;
           surface: string | null;
           notes: string | null;
           opening_hours: string | null;
           created_by: string;
-          created_at: string;
-          updated_at: string;
           distance_m: number;
           average_rating: number | null;
           review_count: number;
