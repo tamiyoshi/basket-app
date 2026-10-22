@@ -7,20 +7,20 @@ alter table public.court_photos enable row level security;
 alter table public.reviews enable row level security;
 
 -- Profiles
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'profiles' and policyname = 'Profiles are readable by all'
-  ) then
-    execute 'create policy "Profiles are readable by all" on public.profiles for select using (true);';
-  end if;
+drop policy if exists "Profiles are readable by all" on public.profiles;
+create policy "Profiles are readable by all" on public.profiles for select using (true);
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'profiles' and policyname = 'Users can manage their profile'
-  ) then
-    execute 'create policy "Users can manage their profile" on public.profiles for all using (auth.uid() = id) with check (auth.uid() = id);';
-  end if;
-end $$;
+drop policy if exists "Users can manage their profile" on public.profiles;
+drop policy if exists "Users can insert their profile" on public.profiles;
+create policy "Users can insert their profile" on public.profiles
+  for insert with check (auth.uid() = id and role = 'user'::user_role);
+
+drop policy if exists "Users can update their profile" on public.profiles;
+create policy "Users can update their profile" on public.profiles
+  for update using (auth.uid() = id) with check (auth.uid() = id);
+
+revoke update on public.profiles from anon, authenticated;
+grant update (display_name, avatar_url) on public.profiles to authenticated;
 
 -- Courts
 do $$
@@ -31,11 +31,8 @@ begin
     execute 'create policy "Courts are readable by all" on public.courts for select using (true);';
   end if;
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'courts' and policyname = 'Authenticated users can insert courts'
-  ) then
-    execute 'create policy "Authenticated users can insert courts" on public.courts for insert with check (auth.role() = ''authenticated'');';
-  end if;
+  execute 'drop policy if exists "Authenticated users can insert courts" on public.courts;';
+  execute 'create policy "Authenticated users can insert courts" on public.courts for insert with check (auth.uid() = created_by);';
 
   if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'courts' and policyname = 'Creators can update their courts'
@@ -59,11 +56,8 @@ begin
     execute 'create policy "Court photos are readable by all" on public.court_photos for select using (true);';
   end if;
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'court_photos' and policyname = 'Authenticated users can insert photos'
-  ) then
-    execute 'create policy "Authenticated users can insert photos" on public.court_photos for insert with check (auth.role() = ''authenticated'');';
-  end if;
+  execute 'drop policy if exists "Authenticated users can insert photos" on public.court_photos;';
+  execute 'create policy "Authenticated users can insert photos" on public.court_photos for insert with check (auth.uid() = uploaded_by);';
 
   if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'court_photos' and policyname = 'Uploaders can modify photos'
@@ -81,11 +75,8 @@ begin
     execute 'create policy "Reviews are readable by all" on public.reviews for select using (true);';
   end if;
 
-  if not exists (
-    select 1 from pg_policies where schemaname = 'public' and tablename = 'reviews' and policyname = 'Authenticated users can insert reviews'
-  ) then
-    execute 'create policy "Authenticated users can insert reviews" on public.reviews for insert with check (auth.role() = ''authenticated'');';
-  end if;
+  execute 'drop policy if exists "Authenticated users can insert reviews" on public.reviews;';
+  execute 'create policy "Authenticated users can insert reviews" on public.reviews for insert with check (auth.uid() = author_id);';
 
   if not exists (
     select 1 from pg_policies where schemaname = 'public' and tablename = 'reviews' and policyname = 'Authors can modify their reviews'
@@ -93,12 +84,3 @@ begin
     execute 'create policy "Authors can modify their reviews" on public.reviews for all using (auth.uid() = author_id) with check (auth.uid() = author_id);';
   end if;
 end $$;
-
--- Optional helper to ensure created_at/updated_at are set
-create or replace function public.handle_new_profile() returns trigger as $$
-begin
-  new.created_at := timezone('utc', now());
-  new.updated_at := timezone('utc', now());
-  return new;
-end;
-$$ language plpgsql;

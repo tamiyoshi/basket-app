@@ -29,6 +29,38 @@ create table if not exists public.profiles (
   updated_at timestamptz default timezone('utc'::text, now()) not null
 );
 
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (id, display_name, avatar_url)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name'),
+    coalesce(new.raw_user_meta_data ->> 'avatar_url', new.raw_user_meta_data ->> 'picture')
+  )
+  on conflict (id) do nothing;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+insert into public.profiles (id, display_name, avatar_url)
+select
+  id,
+  coalesce(raw_user_meta_data ->> 'full_name', raw_user_meta_data ->> 'name'),
+  coalesce(raw_user_meta_data ->> 'avatar_url', raw_user_meta_data ->> 'picture')
+from auth.users
+on conflict (id) do nothing;
+
 -- Courts table stores outdoor court metadata
 create table if not exists public.courts (
   id uuid primary key default uuid_generate_v4(),
@@ -46,10 +78,10 @@ create table if not exists public.courts (
   is_free boolean not null default true,
   hoop_count integer,
   surface text,
-  facility_tags text[] default '{}',
+  facility_tags text[] not null default '{}',
   notes text,
   opening_hours text,
-  created_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz default timezone('utc'::text, now()) not null,
   updated_at timestamptz default timezone('utc'::text, now()) not null
 );
@@ -74,7 +106,7 @@ create table if not exists public.court_photos (
   id uuid primary key default uuid_generate_v4(),
   court_id uuid not null references public.courts(id) on delete cascade,
   storage_path text not null,
-  uploaded_by uuid not null references auth.users(id) on delete cascade,
+  uploaded_by uuid not null references public.profiles(id) on delete cascade,
   created_at timestamptz default timezone('utc'::text, now()) not null
 );
 
@@ -85,12 +117,73 @@ create index if not exists court_photos_uploaded_by_idx on public.court_photos (
 create table if not exists public.reviews (
   id uuid primary key default uuid_generate_v4(),
   court_id uuid not null references public.courts(id) on delete cascade,
-  author_id uuid not null references auth.users(id) on delete cascade,
+  author_id uuid not null references public.profiles(id) on delete cascade,
   rating integer not null check (rating between 1 and 5),
   comment text,
   created_at timestamptz default timezone('utc'::text, now()) not null,
   updated_at timestamptz default timezone('utc'::text, now()) not null
 );
+
+do $$
+begin
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.courts'::regclass
+      and conname = 'courts_created_by_fkey'
+      and confrelid <> 'public.profiles'::regclass
+  ) then
+    alter table public.courts drop constraint courts_created_by_fkey;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.courts'::regclass
+      and conname = 'courts_created_by_fkey'
+  ) then
+    alter table public.courts
+      add constraint courts_created_by_fkey
+      foreign key (created_by) references public.profiles(id) on delete cascade;
+  end if;
+
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.court_photos'::regclass
+      and conname = 'court_photos_uploaded_by_fkey'
+      and confrelid <> 'public.profiles'::regclass
+  ) then
+    alter table public.court_photos drop constraint court_photos_uploaded_by_fkey;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.court_photos'::regclass
+      and conname = 'court_photos_uploaded_by_fkey'
+  ) then
+    alter table public.court_photos
+      add constraint court_photos_uploaded_by_fkey
+      foreign key (uploaded_by) references public.profiles(id) on delete cascade;
+  end if;
+
+  if exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.reviews'::regclass
+      and conname = 'reviews_author_id_fkey'
+      and confrelid <> 'public.profiles'::regclass
+  ) then
+    alter table public.reviews drop constraint reviews_author_id_fkey;
+  end if;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.reviews'::regclass
+      and conname = 'reviews_author_id_fkey'
+  ) then
+    alter table public.reviews
+      add constraint reviews_author_id_fkey
+      foreign key (author_id) references public.profiles(id) on delete cascade;
+  end if;
+end $$;
+
+update public.courts set facility_tags = '{}' where facility_tags is null;
+alter table public.courts alter column facility_tags set default '{}';
+alter table public.courts alter column facility_tags set not null;
 
 create index if not exists reviews_court_id_idx on public.reviews (court_id);
 create index if not exists reviews_author_id_idx on public.reviews (author_id);
