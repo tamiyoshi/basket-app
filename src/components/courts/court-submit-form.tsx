@@ -24,6 +24,12 @@ const FACILITY_TAG_OPTIONS = [
   "自販機",
 ] as const;
 
+const START_TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const minutes = index * 30;
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+});
+const END_TIME_OPTIONS = [...START_TIME_OPTIONS.slice(1), "24:00"];
+
 type CourtSubmitFormProps = {
   className?: string;
 };
@@ -40,6 +46,9 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
   const [formState, setFormState] = useState<FormState>({ status: "idle" });
   const [pending, startTransition] = useTransition();
   const [isGeolocating, setIsGeolocating] = useState(false);
+  const [openingStart, setOpeningStart] = useState("");
+  const [openingEnd, setOpeningEnd] = useState("");
+  const [openingHoursError, setOpeningHoursError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm<FormValues>({
@@ -93,6 +102,17 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
   };
 
   const onSubmit = (values: FormValues) => {
+    if (Boolean(openingStart) !== Boolean(openingEnd)) {
+      setOpeningHoursError("営業時間を登録する場合は、開始と終了を両方選択してください");
+      return;
+    }
+    if (openingStart && openingEnd <= openingStart) {
+      setOpeningHoursError("終了時刻は開始時刻より後にしてください");
+      return;
+    }
+
+    setOpeningHoursError(null);
+    const openingHours = openingStart && openingEnd ? `${openingStart}〜${openingEnd}` : "";
     const formData = new FormData();
     formData.append("name", values.name);
     formData.append("address", values.address);
@@ -106,8 +126,8 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
     if (values.surface) {
       formData.append("surface", values.surface);
     }
-    if (values.openingHours) {
-      formData.append("openingHours", values.openingHours);
+    if (openingHours) {
+      formData.append("openingHours", openingHours);
     }
     if (values.notes) {
       formData.append("notes", values.notes);
@@ -140,6 +160,8 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
         facilityTags: [],
         photo: null,
       });
+      setOpeningStart("");
+      setOpeningEnd("");
       if (photoInputRef.current) {
         photoInputRef.current.value = "";
       }
@@ -318,13 +340,41 @@ export function CourtSubmitForm({ className }: CourtSubmitFormProps) {
           <FieldError message={form.formState.errors.surface?.message} />
         </Field>
         <Field>
-          <Label htmlFor="openingHours">営業時間</Label>
-          <Input
-            id="openingHours"
-            placeholder="例：24時間 / 9:00-21:00"
-            {...form.register("openingHours")}
-          />
-          <FieldError message={form.formState.errors.openingHours?.message} />
+          <Label htmlFor="openingStart">営業時間（任意）</Label>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            <select
+              id="openingStart"
+              value={openingStart}
+              onChange={(event) => {
+                const value = event.target.value;
+                setOpeningStart(value);
+                setOpeningHoursError(null);
+                if (openingEnd && openingEnd <= value) setOpeningEnd("");
+              }}
+              className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">開始時刻</option>
+              {START_TIME_OPTIONS.map((time) => <option key={time} value={time}>{time}</option>)}
+            </select>
+            <span className="text-sm text-muted-foreground">〜</span>
+            <select
+              id="openingEnd"
+              aria-label="営業時間の終了時刻"
+              value={openingEnd}
+              onChange={(event) => {
+                setOpeningEnd(event.target.value);
+                setOpeningHoursError(null);
+              }}
+              className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">終了時刻</option>
+              {END_TIME_OPTIONS.filter((time) => !openingStart || time > openingStart).map((time) => (
+                <option key={time} value={time}>{time}</option>
+              ))}
+            </select>
+          </div>
+          <span className="text-xs text-muted-foreground">30分単位で選択できます。営業時間が不明な場合は未選択のままにしてください。</span>
+          <FieldError message={openingHoursError ?? form.formState.errors.openingHours?.message} />
         </Field>
       </div>
 

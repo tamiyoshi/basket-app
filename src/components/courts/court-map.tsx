@@ -9,6 +9,13 @@ import { cn } from "@/lib/utils";
 const DEFAULT_CENTER = { lat: 35.681236, lng: 139.767125 }; // Tokyo Station as fallback
 const DEFAULT_ZOOM = 12;
 const COURT_MAX_ZOOM = 16;
+const BASKETBALL_MARKER_ICON = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="48" height="58" viewBox="0 0 48 58">
+    <path d="M24 56C20.2 48.4 4 34.6 4 20a20 20 0 1 1 40 0c0 14.6-16.2 28.4-20 36Z" fill="#f97316" stroke="#fff" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="24" cy="20" r="11" fill="#fff"/>
+    <path d="M13 20h22M24 9c-3.2 3.1-4.8 6.8-4.8 11s1.6 7.9 4.8 11m0-22c3.2 3.1 4.8 6.8 4.8 11S27.2 27.9 24 31" fill="none" stroke="#f97316" stroke-width="1.7"/>
+  </svg>
+`)}`;
 
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
   {
@@ -78,10 +85,11 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<GoogleMap | null>(null);
   const markersRef = useRef<Marker[]>([]);
+  const [mapReady, setMapReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(Boolean(apiKey));
   const hasCourts = useMemo(
-    () => courts.some((court) => typeof court.latitude === "number" && typeof court.longitude === "number"),
+    () => courts.some((court) => Number.isFinite(Number(court.latitude)) && Number.isFinite(Number(court.longitude))),
     [courts],
   );
 
@@ -89,14 +97,16 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
     if (location && isFinite(location.lat) && isFinite(location.lng)) {
       return location;
     }
-    const firstCourt = courts.find(
-      (court) => typeof court.latitude === "number" && typeof court.longitude === "number",
+    const firstCourt = courts.find((court) =>
+      Number.isFinite(Number(court.latitude)) && Number.isFinite(Number(court.longitude)),
     );
     if (firstCourt) {
-      return { lat: firstCourt.latitude, lng: firstCourt.longitude };
+      return { lat: Number(firstCourt.latitude), lng: Number(firstCourt.longitude) };
     }
     return DEFAULT_CENTER;
   }, [courts, location]);
+  const mapConfigRef = useRef({ initialCenter, hasCourts, location });
+  mapConfigRef.current = { initialCenter, hasCourts, location };
 
   useEffect(() => {
     if (!apiKey) {
@@ -120,9 +130,10 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
         }
 
         const { Map } = maps as google.maps.MapsLibrary;
+        const currentConfig = mapConfigRef.current;
         const map = new Map(containerRef.current, {
-          center: initialCenter,
-          zoom: location ? 14 : hasCourts ? 13 : DEFAULT_ZOOM,
+          center: currentConfig.initialCenter,
+          zoom: currentConfig.location ? 14 : currentConfig.hasCourts ? 13 : DEFAULT_ZOOM,
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
@@ -134,6 +145,7 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
         });
 
         mapRef.current = map;
+        setMapReady(true);
         setIsLoading(false);
       })
       .catch((error) => {
@@ -157,10 +169,10 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
         mapRef.current = null;
       }
     };
-  }, [hasCourts, initialCenter, location]);
+  }, []);
 
   useEffect(() => {
-    if (!mapRef.current) {
+    if (!mapRef.current || !mapReady) {
       return;
     }
 
@@ -172,9 +184,9 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
     let hasAnyMarker = false;
 
     courts.forEach((court) => {
-      const lat = court.latitude;
-      const lng = court.longitude;
-      if (typeof lat !== "number" || typeof lng !== "number") {
+      const lat = Number(court.latitude);
+      const lng = Number(court.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
         return;
       }
 
@@ -183,26 +195,30 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
         map,
         title: court.name,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: 9,
-          fillColor: "#f97316",
-          fillOpacity: 0.95,
-          strokeColor: "#ffffff",
-          strokeOpacity: 0.9,
-          strokeWeight: 2,
+          url: BASKETBALL_MARKER_ICON,
+          scaledSize: new google.maps.Size(40, 48),
+          anchor: new google.maps.Point(20, 46),
         },
         zIndex: 5,
       });
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="font-size: 14px; max-width: 220px;">
-            <strong>${court.name}</strong><br />
-            <span>${court.address}</span><br />
-            <span>${court.is_free ? "無料" : "有料"}</span>
-          </div>
-        `,
-      });
+      const infoContent = document.createElement("div");
+      infoContent.style.fontSize = "14px";
+      infoContent.style.maxWidth = "220px";
+
+      const nameLink = document.createElement("a");
+      nameLink.href = `/courts/${encodeURIComponent(court.id)}`;
+      nameLink.textContent = court.name;
+      nameLink.style.fontWeight = "600";
+
+      const address = document.createElement("div");
+      address.textContent = court.address;
+
+      const price = document.createElement("div");
+      price.textContent = court.is_free ? "無料" : "有料";
+
+      infoContent.append(nameLink, address, price);
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
 
       marker.addListener("click", () => {
         infoWindow.open({ map, anchor: marker });
@@ -251,7 +267,7 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
       map.setCenter(initialCenter);
       map.setZoom(DEFAULT_ZOOM);
     }
-  }, [courts, initialCenter, location]);
+  }, [courts, initialCenter, location, mapReady]);
 
   if (loadError) {
     return (

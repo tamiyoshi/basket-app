@@ -8,7 +8,7 @@ import { ReviewForm } from "@/components/reviews/review-form";
 import { ReviewCard } from "@/components/reviews/review-card";
 import { Button } from "@/components/ui/button";
 import { getCourtById, getCourtReviews } from "@/lib/courts";
-import { getSessionWithProfile } from "@/lib/auth";
+import { getUserWithProfile } from "@/lib/auth";
 
 const photoBucketBase = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/court-photos`
@@ -67,7 +67,7 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
   }
 
   const reviews = await getCourtReviews(id);
-  const { session } = await getSessionWithProfile();
+  const { user } = await getUserWithProfile();
 
   return (
     <div className="space-y-8">
@@ -98,7 +98,7 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
           <header className="space-y-2">
             <h2 className="text-lg font-semibold">基本情報</h2>
             <p className="text-sm text-muted-foreground">
-              Supabaseの`courts`テーブルからSSRで取得した情報を表示しています。
+              PostgreSQLから取得したコート情報を表示しています。
             </p>
           </header>
 
@@ -149,7 +149,7 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
             </h3>
             {court.photos.length === 0 ? (
               <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                写真はまだ投稿されていません。ログイン後に追加できます。
+                写真はまだ投稿されていません。
               </div>
             ) : (
               <ul className="grid gap-3 sm:grid-cols-2">
@@ -179,19 +179,23 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
 
         <aside className="space-y-4 rounded-xl border bg-card p-6 shadow-sm">
           <h2 className="text-lg font-semibold">次のステップ</h2>
-          <p className="text-sm text-muted-foreground">
-            レビュー投稿と写真追加はログインユーザーのみが利用できます。
-          </p>
+          {!user ? (
+            <p className="text-sm text-muted-foreground">
+              レビュー投稿はログインユーザーのみが利用できます。
+            </p>
+          ) : null}
           <div className="space-y-2">
-            <Button asChild className="w-full">
-              <Link href="/login">Googleでログイン</Link>
-            </Button>
+            {!user ? (
+              <Button asChild className="w-full">
+                <Link href="/login">Googleでログイン</Link>
+              </Button>
+            ) : null}
             <Button asChild variant="outline" className="w-full">
               <Link href="/submit">コート情報を更新する</Link>
             </Button>
           </div>
           <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground">
-            投稿はRLSにより認証済みユーザーのみ可能。承認フローは設けず即時公開されます。
+            投稿はサーバー側で認証を確認して保存し、承認フローなしで公開されます。
           </div>
         </aside>
       </div>
@@ -201,17 +205,17 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
           <div>
             <h2 className="text-lg font-semibold">レビュー</h2>
             <p className="text-sm text-muted-foreground">
-              Supabaseの`reviews`テーブルに保存されたユーザーの声を表示します。
+              PostgreSQLに保存されたユーザーのレビューを表示します。
             </p>
           </div>
-          {!session ? (
+          {!user ? (
             <Button asChild variant="outline" size="sm">
               <Link href="/login">ログインしてレビューを投稿</Link>
             </Button>
           ) : null}
         </header>
 
-        {session ? (
+        {user ? (
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <h3 className="text-sm font-semibold">レビューを投稿</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -223,7 +227,9 @@ export default async function CourtDetailPage({ params }: CourtDetailPageProps) 
 
         {reviews.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
-            まだレビューがありません。Googleログイン後に最初のレビューを投稿しましょう。
+            {user
+              ? "まだレビューがありません。最初のレビューを投稿しましょう。"
+              : "まだレビューがありません。Googleログイン後に最初のレビューを投稿できます。"}
           </div>
         ) : (
           <ul className="space-y-4">

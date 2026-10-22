@@ -2,21 +2,20 @@ import Link from "next/link";
 
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
-import { getCurrentProfile, getSupabaseSession } from "@/lib/auth";
+import { getUserWithProfile } from "@/lib/auth";
 
 import { signOut } from "./actions";
 
 export default async function LoginPage() {
-  const session = await getSupabaseSession();
-  const profile = await getCurrentProfile();
+  const { user, profile } = await getUserWithProfile();
 
-  if (session) {
+  if (user) {
     return (
       <div className="mx-auto max-w-md space-y-6">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">ログイン済み</h1>
           <p className="text-sm text-muted-foreground">
-            {profile?.display_name ?? session.user.email ?? "ユーザー"} さん、ようこそ！
+            {profile?.display_name ?? user.email ?? "ユーザー"} さん、ようこそ！
           </p>
         </div>
         <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
@@ -43,7 +42,7 @@ export default async function LoginPage() {
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Googleでログイン</h1>
         <p className="text-sm text-muted-foreground">
-          Supabase Authを利用したGoogle OAuthで認証します。ログイン後は投稿・レビュー機能が有効化されます。
+            Google OAuthで認証し、投稿とレビューはログインユーザーのみ利用できます。
         </p>
       </div>
       <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">

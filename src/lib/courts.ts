@@ -1,27 +1,11 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
-
-export type CourtRow = Database["public"]["Tables"]["courts"]["Row"];
-export type ReviewRow = Database["public"]["Tables"]["reviews"]["Row"];
-export type CourtPhotoRow = Database["public"]["Tables"]["court_photos"]["Row"];
-export type CourtWithStatsRow = Database["public"]["Views"]["court_with_stats"]["Row"];
-
-type CourtWithStatsRowWithTags = CourtWithStatsRow & {
-  facility_tags: string[] | null;
-};
-
-type NearbyCourtRow = CourtRow & {
-  distance_m: number;
-  average_rating: number | null;
-  review_count: number;
-  facility_tags: string[] | null;
-};
+import { getDb } from "@/lib/db";
+import type { CourtPhotoRow, CourtRow, ReviewRow } from "@/types/database";
 
 export type CourtSummary = CourtRow & {
   reviewCount: number;
   averageRating: number | null;
   distanceMeters?: number | null;
-  facilityTags?: string[];
+  facilityTags: string[];
 };
 
 export type CourtDetail = CourtRow & {
@@ -50,300 +34,155 @@ export type CourtSearchFilters = {
   } | null;
 };
 
-function calculateRatingSummary(reviews: Pick<ReviewRow, "rating">[]) {
-  if (!reviews?.length) {
-    return { reviewCount: 0, averageRating: null } as const;
-  }
+type CourtStatsRow = CourtRow & {
+  average_rating: number | null;
+  review_count: number;
+};
 
-  const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+function normalizePagination(limit = 12, offset = 0) {
   return {
-    reviewCount: reviews.length,
-    averageRating: Math.round((total / reviews.length) * 10) / 10,
-  } as const;
+    limit: Math.min(Math.max(Math.floor(limit), 1), 100),
+    offset: Math.min(Math.max(Math.floor(offset), 0), 100000),
+  };
+}
+
+function mapCourtRow(row: CourtStatsRow): CourtSummary {
+  return {
+    ...row,
+    reviewCount: Number(row.review_count),
+    averageRating: row.average_rating,
+    facilityTags: row.facility_tags ?? [],
+  };
 }
 
 export async function getCourts(filters: CourtSearchFilters = {}): Promise<CourtSummary[]> {
-  const supabase = createSupabaseServerClient();
-  const limit = filters.limit ?? 12;
+  const sql = getDb();
+  const { limit, offset } = normalizePagination(filters.limit, filters.offset);
+  const isFree = filters.isFree ?? null;
+  const facilityTag = filters.facilityTag?.trim() || null;
 
   if (filters.useLocation) {
-    const radius = filters.useLocation.radiusMeters ?? 5000;
-    const { data, error } = await supabase.rpc("courts_nearby", {
-      lat: filters.useLocation.lat,
-      lng: filters.useLocation.lng,
-      radius_m: radius,
-      limit_count: limit,
-    });
+    const { lat, lng } = filters.useLocation;
+    const radius = Math.min(Math.max(Math.floor(filters.useLocation.radiusMeters ?? 5000), 1), 50000);
+    const rows = await sql<(CourtStatsRow & { distance_m: number })[]>`
+      SELECT
+        c.id, c.name, c.address, c.latitude, c.longitude, c.is_free, c.hoop_count,
+        c.surface, c.facility_tags, c.notes, c.opening_hours, c.created_by,
+        c.created_at, c.updated_at,
+        s.average_rating, s.review_count,
+        ST_Distance(c.geom, point.location)::double precision AS distance_m
+      FROM public.courts AS c
+      JOIN public.court_with_stats AS s ON s.id = c.id
+      CROSS JOIN (
+        SELECT ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography AS location
+      ) AS point
+      WHERE ST_DWithin(c.geom, point.location, ${radius})
+        AND (${isFree}::boolean IS NULL OR c.is_free = ${isFree})
+        AND (${facilityTag}::text IS NULL OR ${facilityTag} = ANY(c.facility_tags))
+      ORDER BY distance_m ASC, c.id ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `;
 
-    if (error) {
-      console.error("Failed to fetch nearby courts", error);
-      throw new Error(error.message ?? "コート情報の取得に失敗しました");
-    }
-
-    const nearby = (data as NearbyCourtRow[] | null) ?? [];
-    return nearby
-      .filter((court) => {
-        const passesPrice =
-          filters.isFree === undefined || filters.isFree === null
-            ? true
-            : court.is_free === filters.isFree;
-        const passesTags =
-          !filters.facilityTag || (court.facility_tags ?? []).includes(filters.facilityTag);
-        return passesPrice && passesTags;
-      })
-      .map((court) => ({
-        ...court,
-        averageRating: court.average_rating ?? null,
-        reviewCount: court.review_count ?? 0,
-        distanceMeters: court.distance_m ?? null,
-        facilityTags: court.facility_tags ?? [],
-      }));
+    return rows.map((row) => ({ ...mapCourtRow(row), distanceMeters: row.distance_m }));
   }
 
-  const offset = filters.offset ?? 0;
+  const rows = await sql<CourtStatsRow[]>`
+    SELECT
+      id, name, address, latitude, longitude, is_free, hoop_count, surface,
+      facility_tags, notes, opening_hours, created_by, created_at, updated_at,
+      average_rating, review_count
+    FROM public.court_with_stats
+    WHERE (${isFree}::boolean IS NULL OR is_free = ${isFree})
+      AND (${facilityTag}::text IS NULL OR ${facilityTag} = ANY(facility_tags))
+    ORDER BY created_at DESC, id DESC
+    LIMIT ${limit} OFFSET ${offset}
+  `;
 
-  let query = supabase
-    .from("court_with_stats")
-    .select(
-      `
-      id,
-      name,
-      address,
-      latitude,
-      longitude,
-      is_free,
-      hoop_count,
-      surface,
-      facility_tags,
-      notes,
-      opening_hours,
-      created_by,
-      created_at,
-      updated_at,
-      average_rating,
-      review_count
-    `,
-    )
-    .order("created_at", { ascending: false });
+  return rows.map(mapCourtRow);
+}
 
-  if (filters.isFree !== undefined && filters.isFree !== null) {
-    query = query.eq("is_free", filters.isFree);
-  }
+export async function getRankingCourts(limit = 20) {
+  const sql = getDb();
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
+  const rows = await sql<{
+    id: string;
+    name: string;
+    address: string;
+    average_rating: number | null;
+    review_count: number;
+    facility_tags: string[];
+  }[]>`
+    SELECT id, name, address, average_rating, review_count, facility_tags
+    FROM public.court_with_stats
+    WHERE review_count > 0
+    ORDER BY average_rating DESC NULLS LAST, review_count DESC, name ASC
+    LIMIT ${safeLimit}
+  `;
 
-  query = query.range(offset, offset + limit - 1);
-
-  if (filters.facilityTag) {
-    query = query.contains("facility_tags", [filters.facilityTag]);
-  }
-
-  const { data, error } = await query.returns<CourtWithStatsRowWithTags[]>();
-
-  if (error) {
-    const message = error?.message ?? String(error);
-
-    if (message.includes("court_with_stats")) {
-      return fetchCourtsFromBaseTable({
-        supabase,
-        limit,
-        offset,
-        isFree: filters.isFree,
-        facilityTag: filters.facilityTag,
-      });
-    }
-
-    if (message.includes("Invalid API key")) {
-      console.error("Failed to fetch courts", message);
-      throw new Error("Supabase API キーが無効です。環境変数 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY を確認してください。");
-    }
-
-    console.error("Failed to fetch courts", message);
-    throw new Error(message ?? "コート情報の取得に失敗しました");
-  }
-
-  return (data ?? []).map(({ average_rating, review_count, facility_tags, ...rest }) => ({
-    ...rest,
-    facility_tags: facility_tags ?? [],
-    reviewCount: Number(review_count ?? 0),
-    averageRating: average_rating ?? null,
-    distanceMeters: undefined,
-    facilityTags: facility_tags ?? [],
+  return rows.map((row) => ({
+    ...row,
+    reviewCount: Number(row.review_count),
+    facilityTags: row.facility_tags ?? [],
   }));
 }
 
-async function fetchCourtsFromBaseTable(params: {
-  supabase: ReturnType<typeof createSupabaseServerClient>;
-  limit: number;
-  offset: number;
-  isFree?: boolean | null;
-  facilityTag?: string | null;
-}) {
-  const { supabase, limit, offset, isFree, facilityTag } = params;
-
-  let query = supabase
-    .from("courts")
-    .select(
-      `
-      id,
-      name,
-      address,
-      latitude,
-      longitude,
-      is_free,
-      hoop_count,
-      surface,
-      notes,
-      opening_hours,
-      created_by,
-      created_at,
-      updated_at,
-      reviews:reviews(rating)
-    `,
-    )
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-
-  if (isFree !== undefined && isFree !== null) {
-    query = query.eq("is_free", isFree);
-  }
-
-  if (facilityTag) {
-    query = query.contains("facility_tags", [facilityTag]);
-  }
-
-  const { data, error } = await query.returns<
-    (CourtRow & {
-      reviews: Pick<ReviewRow, "rating">[];
-    })[]
-  >();
-
-  if (error) {
-    const message = error.message ?? String(error);
-    if (message.includes("public.courts")) {
-      console.warn(
-        "Supabase schema 未適用のため courts テーブルにアクセスできません。supabase/schema.sql を適用してください。",
-      );
-      return [];
-    }
-
-    if (message.includes("facility_tags")) {
-      console.warn(
-        "facility_tags カラムが存在しません。最新の schema.sql を適用してください。",
-      );
-      return [];
-    }
-
-    if (message.includes("Invalid API key")) {
-      console.error("Failed to fetch courts (fallback)", message);
-      throw new Error("Supabase API キーが無効です。環境変数 NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY を確認してください。");
-    }
-
-    console.error("Failed to fetch courts (fallback)", message);
-    throw new Error(message ?? "コート情報の取得に失敗しました");
-  }
-
-  return (data ?? []).map((court) => {
-    const { reviews, facility_tags, ...rest } = court;
-    const { averageRating, reviewCount } = calculateRatingSummary(reviews ?? []);
-
-    return {
-      ...rest,
-      reviewCount,
-      averageRating,
-      distanceMeters: undefined,
-      facility_tags: facility_tags ?? [],
-      facilityTags: facility_tags ?? [],
-    } as CourtSummary;
-  });
-}
-
 export async function getCourtById(id: string): Promise<CourtDetail | null> {
-  const supabase = createSupabaseServerClient();
-
-  const { data, error } = await supabase
-    .from("courts")
-    .select(
-      `
-      id,
-      name,
-      address,
-      latitude,
-      longitude,
-      is_free,
-      hoop_count,
-      surface,
-      notes,
-      opening_hours,
-      created_by,
-      created_at,
-      updated_at,
-      photos:court_photos(id, storage_path, uploaded_by, created_at),
-      reviews:reviews(rating)
-    `,
-    )
-    .eq("id", id)
-    .maybeSingle()
-    .returns<
-      (CourtRow & {
-        photos: CourtPhotoRow[];
-        reviews: Pick<ReviewRow, "rating">[];
-      }) | null
-    >();
-
-  if (error) {
-    console.error("Failed to fetch court detail", error);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) {
     return null;
   }
 
-  if (!data) {
-    return null;
-  }
+  const sql = getDb();
+  const rows = await sql<(CourtStatsRow & { photos: CourtPhotoRow[] })[]>`
+    SELECT
+      c.id, c.name, c.address, c.latitude, c.longitude, c.is_free, c.hoop_count,
+      c.surface, c.facility_tags, c.notes, c.opening_hours, c.created_by,
+      c.created_at, c.updated_at,
+      s.average_rating, s.review_count,
+      COALESCE(photo_list.photos, '[]'::json) AS photos
+    FROM public.courts AS c
+    JOIN public.court_with_stats AS s ON s.id = c.id
+    LEFT JOIN LATERAL (
+      SELECT json_agg(
+        json_build_object(
+          'id', p.id,
+          'court_id', p.court_id,
+          'storage_path', p.storage_path,
+          'uploaded_by', p.uploaded_by,
+          'created_at', p.created_at
+        ) ORDER BY p.created_at DESC
+      ) AS photos
+      FROM public.court_photos AS p
+      WHERE p.court_id = c.id
+    ) AS photo_list ON true
+    WHERE c.id = ${id}::uuid
+    LIMIT 1
+  `;
 
-  const { reviews, ...rest } = data;
-  const { averageRating, reviewCount } = calculateRatingSummary(reviews ?? []);
+  const row = rows[0];
+  if (!row) return null;
 
   return {
-    ...rest,
-    photos: data.photos ?? [],
-    averageRating,
-    reviewCount,
-  } as CourtDetail;
+    ...row,
+    photos: row.photos ?? [],
+    reviewCount: Number(row.review_count),
+    averageRating: row.average_rating,
+  };
 }
 
 export async function getCourtReviews(courtId: string): Promise<ReviewWithAuthor[]> {
-  const supabase = createSupabaseServerClient();
+  const sql = getDb();
 
-  const { data, error } = await supabase
-    .from("reviews")
-    .select(
-      `
-      id,
-      court_id,
-      author_id,
-      rating,
-      comment,
-      created_at,
-      updated_at,
-      author:profiles!reviews_author_id_fkey (id, display_name, avatar_url)
-    `,
-    )
-    .eq("court_id", courtId)
-    .order("created_at", { ascending: false })
-    .returns<
-      (ReviewRow & {
-        author: {
-          id: string;
-          display_name: string | null;
-          avatar_url: string | null;
-        } | null;
-      })[]
-    >();
-
-  if (error) {
-    console.error("Failed to fetch court reviews", error);
-    return [];
-  }
-
-  return (data ?? []).map((review) => ({
-    ...review,
-  } as ReviewWithAuthor));
+  return sql<ReviewWithAuthor[]>`
+    SELECT
+      r.id, r.court_id, r.author_id, r.rating, r.comment, r.created_at, r.updated_at,
+      CASE WHEN p.id IS NULL THEN NULL ELSE json_build_object(
+        'id', p.id,
+        'display_name', p.display_name,
+        'avatar_url', p.avatar_url
+      ) END AS author
+    FROM public.reviews AS r
+    LEFT JOIN public.profiles AS p ON p.id = r.author_id
+    WHERE r.court_id = ${courtId}::uuid
+    ORDER BY r.created_at DESC, r.id DESC
+  `;
 }
