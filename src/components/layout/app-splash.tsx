@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { MapPinned, Sparkles } from "lucide-react";
 
-const SPLASH_DURATION_MS = 5600;
-const FADE_DURATION_MS = 1000;
+const SPLASH_DURATION_MS = 2800;
+const FADE_DURATION_MS = 500;
 
 export function AppSplash() {
   const [isVisible, setIsVisible] = useState(true);
@@ -33,14 +33,14 @@ export function AppSplash() {
   return (
     <div
       className={[
-        "fixed inset-0 z-[1600] flex items-center justify-center bg-slate-950 text-slate-100 transition-opacity duration-1000 ease-out",
+        "fixed inset-0 z-[1600] flex items-center justify-center bg-slate-950 text-slate-100 transition-opacity duration-500 ease-out",
         isVisible ? "opacity-100" : "pointer-events-none opacity-0",
       ].join(" ")}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(249,115,22,0.22),_transparent_60%)] transition-opacity duration-1000 ease-out" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(249,115,22,0.22),_transparent_60%)] transition-opacity duration-500 ease-out" />
       <div
         className={[
-          "relative mx-6 max-w-lg space-y-6 rounded-[32px] border border-white/10 bg-white/5 p-10 text-center shadow-[0_40px_140px_rgba(15,23,42,0.8)] backdrop-blur transition-all duration-1000 ease-out",
+          "relative mx-6 max-w-lg space-y-6 rounded-[32px] border border-white/10 bg-white/5 p-10 text-center shadow-[0_40px_140px_rgba(15,23,42,0.8)] backdrop-blur transition-all duration-500 ease-out",
           isVisible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0",
         ].join(" ")}
       >
