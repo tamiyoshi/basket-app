@@ -4,7 +4,6 @@ import postgres from "postgres";
 
 declare global {
   // Keep one connection pool during Next.js development hot reloads.
-  // eslint-disable-next-line no-var
   var basketDatabase: ReturnType<typeof postgres> | undefined;
 }
 
