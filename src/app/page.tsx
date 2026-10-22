@@ -157,12 +157,33 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <div className="space-y-16">
       <section className="space-y-8">
+        <div className="space-y-4">
+          <div className="grid gap-5 rounded-[32px] border border-border/60 bg-card/95 p-6 shadow-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-center lg:p-8">
+            <div className="space-y-3 text-balance">
+              <h1 className="text-2xl font-semibold leading-tight sm:text-3xl lg:text-4xl">
+                地図から見つける、
+                <br className="hidden sm:block" />
+                最高のストリートコート。
+              </h1>
+              <p className="text-sm text-muted-foreground sm:text-base">
+                現在地から近い屋外コートをすばやくチェック。レビューや設備タグで自分に合った場所が見つかります。
+              </p>
+            </div>
+            <div className="space-y-3 rounded-2xl border border-border/70 bg-muted/40 p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <MapPinned className="h-4 w-4 text-primary" />
+                現在地から探す
+              </div>
+              <LocationFilter />
+            </div>
+          </div>
         <div className="overflow-hidden rounded-[40px] border border-border/60 shadow-[0_30px_120px_rgba(15,23,42,0.45)]">
           <CourtMap
             courts={courts}
             location={useLocation}
-            className="h-[80vh] min-h-[420px] w-full border-none shadow-none"
+            className="h-[70vh] min-h-[420px] w-full border-none shadow-none"
           />
+        </div>
         </div>
         {!mapHasCourts ? (
           <div className="rounded-[28px] border border-dashed bg-muted/40 p-5 text-sm text-muted-foreground">
@@ -172,9 +193,9 @@ export default async function Home({ searchParams }: HomePageProps) {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div className="space-y-5 rounded-[32px] border border-border/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8 text-white shadow-[0_24px_90px_rgba(15,23,42,0.5)]">
             <div className="space-y-4 text-balance">
-              <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
+              <h2 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
                 全国のストリートコートを、地図で直感的に。
-              </h1>
+              </h2>
               <p className="text-sm text-white/80 sm:text-base">
                 行きたい街のバスケットコートを検索して、設備やレビューを確認。旅先でもすぐにプレーできる場所を見つけられます。
               </p>
@@ -220,17 +241,7 @@ export default async function Home({ searchParams }: HomePageProps) {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
-        <div className="rounded-[28px] border border-border/70 bg-card/90 p-6 shadow-lg backdrop-blur-sm">
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <MapPinned className="h-4 w-4 text-primary" />
-            現在地から探す
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            位置情報を許可すると半径を指定して近くのコートを優先表示します。旅行先や遠征でも最寄りのピックアップゲームをすばやく発見。
-          </p>
-          <LocationFilter className="mt-5 space-y-4" />
-        </div>
+      <section>
         <div className="rounded-[28px] border border-border/70 bg-gradient-to-br from-primary/15 via-background to-background p-6 shadow-lg backdrop-blur-sm">
           <div className="flex items-center gap-2 text-sm font-semibold text-primary">
             <Sparkles className="h-4 w-4" />
