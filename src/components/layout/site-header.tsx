@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { signOut } from "@/lib/actions/auth";
-import { getSessionWithProfile } from "@/lib/auth";
+import { getUserWithProfile } from "@/lib/auth";
 
 import { Button } from "@/components/ui/button";
 
@@ -12,9 +12,9 @@ const navigationLinks = [
 ];
 
 export async function SiteHeader() {
-  const { session, profile } = await getSessionWithProfile();
-  const displayName = profile?.display_name ?? session?.user?.email ?? null;
-  const isLoggedIn = Boolean(session);
+  const { user, profile } = await getUserWithProfile();
+  const displayName = profile?.display_name ?? user?.email ?? null;
+  const isLoggedIn = Boolean(user);
 
   return (
     <header className="border-b bg-background/85 backdrop-blur">
