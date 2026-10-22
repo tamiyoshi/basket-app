@@ -64,7 +64,7 @@ export async function getCourts(filters: CourtSearchFilters = {}): Promise<Court
   if (filters.useLocation) {
     const { lat, lng } = filters.useLocation;
     const radius = Math.min(Math.max(Math.floor(filters.useLocation.radiusMeters ?? 5000), 1), 50000);
-    const rows = await sql<CourtStatsRow & { distance_m: number }[]>`
+    const rows = await sql<(CourtStatsRow & { distance_m: number })[]>`
       SELECT
         c.id, c.name, c.address, c.latitude, c.longitude, c.is_free, c.hoop_count,
         c.surface, c.facility_tags, c.notes, c.opening_hours, c.created_by,
