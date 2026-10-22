@@ -194,15 +194,23 @@ export function CourtMap({ courts, location, className }: CourtMapProps) {
         zIndex: 5,
       });
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `
-          <div style="font-size: 14px; max-width: 220px;">
-            <strong>${court.name}</strong><br />
-            <span>${court.address}</span><br />
-            <span>${court.is_free ? "無料" : "有料"}</span>
-          </div>
-        `,
-      });
+      const infoContent = document.createElement("div");
+      infoContent.style.fontSize = "14px";
+      infoContent.style.maxWidth = "220px";
+
+      const nameLink = document.createElement("a");
+      nameLink.href = `/courts/${encodeURIComponent(court.id)}`;
+      nameLink.textContent = court.name;
+      nameLink.style.fontWeight = "600";
+
+      const address = document.createElement("div");
+      address.textContent = court.address;
+
+      const price = document.createElement("div");
+      price.textContent = court.is_free ? "無料" : "有料";
+
+      infoContent.append(nameLink, address, price);
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
 
       marker.addListener("click", () => {
         infoWindow.open({ map, anchor: marker });

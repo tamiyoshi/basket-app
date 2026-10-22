@@ -6,6 +6,13 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") ?? "/";
+  let safeTarget = new URL("/", requestUrl.origin);
+  try {
+    const requestedTarget = new URL(next, requestUrl.origin);
+    if (requestedTarget.origin === requestUrl.origin) safeTarget = requestedTarget;
+  } catch {
+    // Ignore malformed or external redirect targets.
+  }
 
   if (code) {
     const supabase = createSupabaseServerClient();
@@ -17,5 +24,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${requestUrl.origin}${next}`);
+  return NextResponse.redirect(safeTarget);
 }

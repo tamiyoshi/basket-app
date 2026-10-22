@@ -4,8 +4,6 @@ import {
   type CookieOptions,
 } from "@supabase/ssr";
 
-import type { Database } from "@/types/database";
-
 export function createSupabaseServerClient() {
   const cookieStorePromise = cookies();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -15,7 +13,7 @@ export function createSupabaseServerClient() {
     throw new Error("Supabase クライアント初期化用の環境変数が設定されていません");
   }
 
-  return createServerClient<Database>(supabaseUrl, supabaseKey, {
+  return createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       async get(name: string) {
         const cookieStore = await cookieStorePromise;

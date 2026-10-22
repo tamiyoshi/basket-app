@@ -1,72 +1,30 @@
 import Link from "next/link";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getRankingCourts } from "@/lib/courts";
 
 export const metadata = {
   title: "人気コートランキング",
   description: "レビュー評価の高いバスケットコートを表示",
 };
 
-type RankingRow = {
-  id: string;
-  name: string;
-  address: string;
-  average_rating: number | null;
-  review_count: number | null;
-  facility_tags: string[] | null;
-};
-
 export default async function RankingPage() {
-  const supabase = createSupabaseServerClient();
+  let courts: Awaited<ReturnType<typeof getRankingCourts>>;
 
-  const { data, error } = await supabase
-    .from("court_with_stats")
-    .select("id, name, address, average_rating, review_count, facility_tags")
-    .order("average_rating", { ascending: false, nullsFirst: false })
-    .order("review_count", { ascending: false, nullsFirst: false })
-    .limit(20)
-    .returns<RankingRow[]>();
-
-  if (error) {
-    const message = error.message ?? "ランキング情報の取得に失敗しました";
-    if (message.includes("court_with_stats")) {
-      return (
-        <section className="mx-auto max-w-4xl space-y-6 py-10">
-          <header className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">人気コートランキング</h1>
-            <p className="text-sm text-muted-foreground">
-              Supabase スキーマを適用してから再度アクセスしてください。
-            </p>
-          </header>
-          <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
-            `supabase/schema.sql` を実行してビューを作成する必要があります。
-          </div>
-        </section>
-      );
-    }
-
+  try {
+    courts = await getRankingCourts(20);
+  } catch (error) {
+    console.error("Failed to fetch ranking", error);
     return (
       <section className="mx-auto max-w-4xl space-y-6 py-10">
         <header className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">人気コートランキング</h1>
         </header>
         <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-sm text-destructive">
-          {message}
+          ランキング情報を取得できませんでした。データベース接続とマイグレーションを確認してください。
         </div>
       </section>
     );
   }
-
-  const rows = data ?? [];
-
-  const courts = rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    address: row.address,
-    averageRating: row.average_rating,
-    reviewCount: Number(row.review_count ?? 0),
-    facilityTags: row.facility_tags ?? [],
-  }));
 
   return (
     <section className="mx-auto max-w-4xl space-y-6 py-10">
@@ -97,7 +55,7 @@ export default async function RankingPage() {
                       {court.name}
                     </Link>
                     <span className="text-sm font-semibold text-primary">
-                      ★ {court.averageRating !== null ? court.averageRating.toFixed(1) : "-"}
+                      ★ {court.average_rating !== null ? court.average_rating.toFixed(1) : "-"}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground">{court.address}</p>

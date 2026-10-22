@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getCourts } from "@/lib/courts";
 import { cn } from "@/lib/utils";
 import { LocationFilter } from "@/components/courts/location-filter";
-import { getSupabaseSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 
 const distanceFilters = [
   { label: "1km", value: 1 },
@@ -109,20 +109,21 @@ function parseStringParam(value?: string | string[]) {
 
 export default async function Home({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const session = await getSupabaseSession();
-  const isLoggedIn = Boolean(session?.user);
+  const user = await getCurrentUser();
+  const isLoggedIn = Boolean(user);
   const isFree = parseBooleanParam(params?.isFree ?? params?.free);
   const lat = parseNumberParam(params?.lat);
   const lng = parseNumberParam(params?.lng);
   const radius = parseNumberParam(params?.radius);
   const facilityTag = parseStringParam(params?.tag);
   const pageParam = parseNumberParam(params?.page);
-  const page = pageParam && pageParam > 0 ? Math.floor(pageParam) : 1;
+  const page = pageParam && pageParam > 0 ? Math.min(Math.floor(pageParam), 10000) : 1;
   const limit = 12;
   const offset = (page - 1) * limit;
 
   const useLocation =
-    typeof lat === "number" && typeof lng === "number"
+    typeof lat === "number" && typeof lng === "number" &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
       ? {
           lat,
           lng,
@@ -134,9 +135,7 @@ export default async function Home({ searchParams }: HomePageProps) {
   let fetchError: string | null = null;
 
   try {
-    const filters = useLocation
-      ? { isFree, limit, useLocation, facilityTag }
-      : { isFree, limit, offset, facilityTag };
+    const filters = { isFree, limit, offset, useLocation, facilityTag };
     courts = await getCourts(filters);
   } catch (error) {
     fetchError = error instanceof Error ? error.message : "コート情報の取得に失敗しました";
@@ -157,18 +156,6 @@ export default async function Home({ searchParams }: HomePageProps) {
   return (
     <div className="space-y-16">
       <section className="space-y-8">
-        <div className="overflow-hidden rounded-[40px] border border-border/60 shadow-[0_30px_120px_rgba(15,23,42,0.45)]">
-          <CourtMap
-            courts={courts}
-            location={useLocation}
-            className="h-[80vh] min-h-[420px] w-full border-none shadow-none"
-          />
-        </div>
-        {!mapHasCourts ? (
-          <div className="rounded-[28px] border border-dashed bg-muted/40 p-5 text-sm text-muted-foreground">
-            コートがまだ表示されていません。地図をドラッグして別エリアを表示するか、検索条件をリセットしてみてください。
-          </div>
-        ) : null}
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
           <div className="space-y-5 rounded-[32px] border border-border/60 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 p-8 text-white shadow-[0_24px_90px_rgba(15,23,42,0.5)]">
             <div className="space-y-4 text-balance">
@@ -218,6 +205,18 @@ export default async function Home({ searchParams }: HomePageProps) {
             </ol>
           </div>
         </div>
+        <div className="overflow-hidden rounded-[40px] border border-border/60 shadow-[0_30px_120px_rgba(15,23,42,0.45)]">
+          <CourtMap
+            courts={courts}
+            location={useLocation}
+            className="h-[80vh] min-h-[420px] w-full border-none shadow-none"
+          />
+        </div>
+        {!mapHasCourts ? (
+          <div className="rounded-[28px] border border-dashed bg-muted/40 p-5 text-sm text-muted-foreground">
+            コートがまだ表示されていません。地図をドラッグして別エリアを表示するか、検索条件をリセットしてみてください。
+          </div>
+        ) : null}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
@@ -247,7 +246,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-primary/70" />
-              <span>Supabase と Google Maps の連携で、投稿後すぐに地図へ反映されるスピード感。</span>
+              <span>PostgreSQL と Google Maps の連携で、投稿後すぐに地図へ反映されます。</span>
             </li>
           </ul>
         </div>
@@ -259,7 +258,7 @@ export default async function Home({ searchParams }: HomePageProps) {
             <div className="space-y-1">
               <h2 className="text-xl font-semibold">最新のコート情報</h2>
               <p className="text-sm text-muted-foreground">
-                SupabaseからSSRで取得したコミュニティ投稿の一覧です。
+                PostgreSQLからSSRで取得したコミュニティ投稿の一覧です。
               </p>
             </div>
             <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">

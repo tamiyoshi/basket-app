@@ -2,19 +2,18 @@ import Link from "next/link";
 
 import { CourtSubmitForm } from "@/components/courts/court-submit-form";
 import { Button } from "@/components/ui/button";
-import { getCurrentProfile, getSupabaseSession } from "@/lib/auth";
+import { getUserWithProfile } from "@/lib/auth";
 
 export default async function SubmitPage() {
-  const session = await getSupabaseSession();
-  const profile = await getCurrentProfile();
+  const { user, profile } = await getUserWithProfile();
 
-  if (!session) {
+  if (!user) {
     return (
       <div className="space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">コートを新規登録</h1>
           <p className="text-sm text-muted-foreground">
-            コートの投稿にはGoogleログインが必要です。認証後はSupabase StorageとRLSによって安全に投稿が保存されます。
+            コートの投稿にはGoogleログインが必要です。サーバーでログイン状態を確認して投稿を保存します。
           </p>
         </div>
         <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-sm text-muted-foreground">
@@ -32,10 +31,10 @@ export default async function SubmitPage() {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">コートを新規登録</h1>
         <p className="text-sm text-muted-foreground">
-          ログイン中のアカウント: {profile?.display_name ?? session.user.email ?? "ユーザー"}
+          ログイン中のアカウント: {profile?.display_name ?? user.email ?? "ユーザー"}
         </p>
         <p className="text-sm text-muted-foreground">
-          地図上でピンを指定し、コート情報と写真（1枚）を登録します。MVPでは投稿後すぐに公開され、RLSで認証ユーザーのみが登録可能となります。
+          地図上でピンを指定し、コート情報と写真（1枚）を登録します。投稿後すぐに公開されます。
         </p>
       </div>
       <div className="rounded-xl border bg-card p-6 shadow-sm">
@@ -45,7 +44,7 @@ export default async function SubmitPage() {
         <CourtSubmitForm />
       </div>
       <div className="rounded-xl border bg-secondary/30 p-4 text-sm">
-        投稿データはSupabaseの`courts`・`court_photos`テーブルに保存されます。写真はStorageの`court-photos`バケットにアップロードし、RLSで本人以外の更新を制限します。
+          投稿データはPostgreSQLに保存され、写真はSupabase Storageの`court-photos`バケットにアップロードされます。
       </div>
     </div>
   );

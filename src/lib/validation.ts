@@ -42,26 +42,38 @@ const imageFileSchema = z
 export const createCourtSchema = z.object({
   name: z
     .string({ message: "コート名は必須です" })
-    .min(2, "コート名は2文字以上で入力してください"),
+    .trim()
+    .min(2, "コート名は2文字以上で入力してください")
+    .max(200, "コート名は200文字以内で入力してください"),
   address: z
     .string({ message: "住所は必須です" })
-    .min(5, "住所は5文字以上で入力してください"),
-  latitude: z
-    .coerce.number({ message: "緯度は数値で入力してください" })
-    .gte(-90, "緯度が不正です")
-    .lte(90, "緯度が不正です"),
-  longitude: z
-    .coerce.number({ message: "経度は数値で入力してください" })
-    .gte(-180, "経度が不正です")
-    .lte(180, "経度が不正です"),
-  isFree: z.coerce.boolean({ message: "料金区分を選択してください" }),
-  hoopCount: z
-    .coerce
-    .number({ message: "リング数は数値で入力してください" })
-    .int("整数を入力してください")
-    .min(0, "0以上を入力してください")
-    .nullish()
-    .transform((value) => (value === null ? null : value)),
+    .trim()
+    .min(5, "住所は5文字以上で入力してください")
+    .max(500, "住所は500文字以内で入力してください"),
+  latitude: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? Number.NaN : value),
+    z.coerce.number({ message: "緯度は数値で入力してください" })
+      .gte(-90, "緯度が不正です")
+      .lte(90, "緯度が不正です"),
+  ),
+  longitude: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? Number.NaN : value),
+    z.coerce.number({ message: "経度は数値で入力してください" })
+      .gte(-180, "経度が不正です")
+      .lte(180, "経度が不正です"),
+  ),
+  isFree: z.union([
+    z.boolean(),
+    z.enum(["true", "false"]).transform((value) => value === "true"),
+  ], { message: "料金区分を選択してください" }),
+  hoopCount: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? null : value),
+    z.coerce
+      .number({ message: "リング数は数値で入力してください" })
+      .int("整数を入力してください")
+      .min(0, "0以上を入力してください")
+      .nullable(),
+  ),
   surface: z
     .string()
     .max(64, "地面の種類は64文字以内で入力してください")
@@ -78,21 +90,24 @@ export const createCourtSchema = z.object({
     .nullish()
     .transform((value) => (value ? value : null)),
   facilityTags: z
-    .array(z.string())
+    .array(z.string().trim().min(1).max(64, "タグは64文字以内で入力してください"))
     .max(10, "タグは10個まで選択できます")
     .optional()
-    .default([]),
+    .default([])
+    .transform((tags) => [...new Set(tags)]),
   photo: imageFileSchema,
 });
 
 export const createReviewSchema = z.object({
-  courtId: z.string({ message: "コートIDが不正です" }),
-  rating: z
-    .coerce
-    .number({ message: "評価は必須です" })
-    .int("1〜5の整数で入力してください")
-    .min(1, "最低評価は1です")
-    .max(5, "最高評価は5です"),
+  courtId: z.uuid({ message: "コートIDが不正です" }),
+  rating: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? Number.NaN : value),
+    z.coerce
+      .number({ message: "評価は必須です" })
+      .int("1〜5の整数で入力してください")
+      .min(1, "最低評価は1です")
+      .max(5, "最高評価は5です"),
+  ),
   comment: z
     .string()
     .max(1000, "コメントは1000文字以内で入力してください")
